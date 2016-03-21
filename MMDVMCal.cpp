@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -116,7 +116,7 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20151008" EOL);
+				::fprintf(stdout, "MMDVMCal 20160321" EOL);
 				break;
 			case -1:
 				break;
@@ -207,7 +207,7 @@ bool CMMDVMCal::writeConfig()
 	unsigned char buffer[50U];
 
 	buffer[0U] = 0xE0U;
-	buffer[1U] = 10U;
+	buffer[1U] = 11U;
 	buffer[2U] = 0x02U;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -222,8 +222,9 @@ bool CMMDVMCal::writeConfig()
 	buffer[7U] = (m_rxLevel * 256U) / 100U;
 	buffer[8U] = (m_txLevel * 256U) / 100U;
 	buffer[9U] = 0U;
+	buffer[10U] = 0U;
 
-	int ret = m_serial.write(buffer, 10U);
+	int ret = m_serial.write(buffer, 11U);
 	if (ret <= 0)
 		return false;
 
