@@ -38,6 +38,7 @@ private:
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
+	unsigned char	  m_mode;
 
 	void displayHelp();
 	bool setTransmit();
@@ -46,6 +47,8 @@ private:
 	bool setTXInvert();
 	bool setRXInvert();
 	bool setPTTInvert();
+	bool setDMRDeviation();
+	bool setDSTAR();
 
 	bool initModem();
 	int  readModem(unsigned char* buffer, unsigned int length);

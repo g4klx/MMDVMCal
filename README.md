@@ -12,5 +12,7 @@ R					Increase receive level
 r					Decrease receive level
 T					Increase transmit level
 t					Decrease transmit level
+D         Set DMR Deviation Mode. Generates a 1.2Khz Sinewave. Set radio for 2.75 Khz Deviation. 
+d         Return to DMR mode. 
 <space>		Toggle transmit
 
