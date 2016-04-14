@@ -49,7 +49,8 @@ m_txLevel(50U),
 m_rxLevel(50U),
 m_txInvert(false),
 m_rxInvert(false),
-m_pttInvert(false)
+m_pttInvert(false),
+m_mode(99U)
 {
 }
 
@@ -116,7 +117,13 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20160321" EOL);
+				::fprintf(stdout, "MMDVMCal 20160413" EOL);
+				break;
+			case 'D':
+				setDMRDeviation();
+				break;
+			case 'd':
+				setDSTAR();
 				break;
 			case -1:
 				break;
@@ -158,6 +165,8 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    r        Decrease receive level" EOL);
 	::fprintf(stdout, "    T        Increase transmit level" EOL);
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
+	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
+	::fprintf(stdout, "    d        Return to Dstar Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
 }
@@ -218,7 +227,7 @@ bool CMMDVMCal::writeConfig()
 		buffer[3U] |= 0x04U;
 	buffer[4U] = 0x00U;
 	buffer[5U] = 0U;
-	buffer[6U] = 99U;
+	buffer[6U] = m_mode;
 	buffer[7U] = (m_rxLevel * 256U) / 100U;
 	buffer[8U] = (m_txLevel * 256U) / 100U;
 	buffer[9U] = 0U;
@@ -271,6 +280,24 @@ bool CMMDVMCal::setPTTInvert()
 	m_pttInvert = !m_pttInvert;
 
 	::fprintf(stdout, "PTT Invert: %s" EOL, m_pttInvert ? "On" : "Off");
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::setDMRDeviation()
+{
+	m_mode=98;
+
+	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::setDSTAR()
+{
+	m_mode= 99;
+
+	::fprintf(stdout, "Dstar Mode" EOL);
 
 	return writeConfig();
 }
