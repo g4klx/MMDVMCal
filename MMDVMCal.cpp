@@ -117,7 +117,7 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20160413" EOL);
+				::fprintf(stdout, "MMDVMCal 20160627" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
@@ -216,7 +216,7 @@ bool CMMDVMCal::writeConfig()
 	unsigned char buffer[50U];
 
 	buffer[0U] = 0xE0U;
-	buffer[1U] = 12U;
+	buffer[1U] = 19U;
 	buffer[2U] = 0x02U;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -233,8 +233,15 @@ bool CMMDVMCal::writeConfig()
 	buffer[9U] = 0U;
 	buffer[10U] = 0U;
 	buffer[11U] = 0U;
+	buffer[12U] = 0U;
+	buffer[13U] = 0U;
+	buffer[14U] = 0U;
+	buffer[15U] = 0U;
+	buffer[16U] = 0U;
+	buffer[17U] = 0U;
+	buffer[18U] = 0U;
 
-	int ret = m_serial.write(buffer, 12U);
+	int ret = m_serial.write(buffer, 19U);
 	if (ret <= 0)
 		return false;
 
