@@ -232,14 +232,14 @@ bool CMMDVMCal::writeConfig()
 	buffer[8U] = (m_txLevel * 256U) / 100U;
 	buffer[9U] = 0U;
 	buffer[10U] = 0U;
-	buffer[11U] = 0U;
-	buffer[12U] = 0U;
-	buffer[13U] = 0U;
-	buffer[14U] = 0U;
-	buffer[15U] = 0U;
-	buffer[16U] = 0U;
-	buffer[17U] = 0U;
-	buffer[18U] = 0U;
+	buffer[11U] = 128U;
+	buffer[12U] = 128U;
+	buffer[13U] = 128U;
+	buffer[14U] = 128U;
+	buffer[15U] = 128U;
+	buffer[16U] = 128U;
+	buffer[17U] = 128U;
+	buffer[18U] = 128U;
 
 	int ret = m_serial.write(buffer, 19U);
 	if (ret <= 0)
