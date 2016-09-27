@@ -117,7 +117,7 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20160816" EOL);
+				::fprintf(stdout, "MMDVMCal 20160927" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
