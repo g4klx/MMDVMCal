@@ -216,7 +216,7 @@ bool CMMDVMCal::writeConfig()
 	unsigned char buffer[50U];
 
 	buffer[0U] = 0xE0U;
-	buffer[1U] = 15U;
+	buffer[1U] = 16U;
 	buffer[2U] = 0x02U;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -236,8 +236,9 @@ bool CMMDVMCal::writeConfig()
 	buffer[12U] = (m_txLevel * 256U) / 100U;
 	buffer[13U] = (m_txLevel * 256U) / 100U;
 	buffer[14U] = (m_txLevel * 256U) / 100U;
+	buffer[15U] = (m_txLevel * 256U) / 100U;
 
-	int ret = m_serial.write(buffer, 15U);
+	int ret = m_serial.write(buffer, 16U);
 	if (ret <= 0)
 		return false;
 
