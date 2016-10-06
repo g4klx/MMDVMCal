@@ -117,7 +117,7 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20160927" EOL);
+				::fprintf(stdout, "MMDVMCal 20161006" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
@@ -228,15 +228,15 @@ bool CMMDVMCal::writeConfig()
 	buffer[4U] = 0x00U;
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
-	buffer[7U] = (m_rxLevel * 256U) / 100U;
-	buffer[8U] = (m_txLevel * 256U) / 100U;
+	buffer[7U] = (m_rxLevel * 255U) / 100U;
+	buffer[8U] = (m_txLevel * 255U) / 100U;
 	buffer[9U] = 0U;
 	buffer[10U] = 0U;
 	buffer[11U] = 128U;
-	buffer[12U] = (m_txLevel * 256U) / 100U;
-	buffer[13U] = (m_txLevel * 256U) / 100U;
-	buffer[14U] = (m_txLevel * 256U) / 100U;
-	buffer[15U] = (m_txLevel * 256U) / 100U;
+	buffer[12U] = (m_txLevel * 255U) / 100U;
+	buffer[13U] = (m_txLevel * 255U) / 100U;
+	buffer[14U] = (m_txLevel * 255U) / 100U;
+	buffer[15U] = (m_txLevel * 255U) / 100U;
 
 	int ret = m_serial.write(buffer, 16U);
 	if (ret <= 0)
