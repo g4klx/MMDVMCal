@@ -308,7 +308,7 @@ bool CMMDVMCal::setDSTAR()
 
 bool CMMDVMCal::setRXLevel(int incr)
 {
-	if (incr > 0 && m_rxLevel < 99U) {
+	if (incr > 0 && m_rxLevel < 100U) {
 		m_rxLevel++;
 		::fprintf(stdout, "RX Level: %u%%" EOL, m_rxLevel);
 		return writeConfig();
@@ -325,7 +325,7 @@ bool CMMDVMCal::setRXLevel(int incr)
 
 bool CMMDVMCal::setTXLevel(int incr)
 {
-	if (incr > 0 && m_txLevel < 99U) {
+	if (incr > 0 && m_txLevel < 100U) {
 		m_txLevel++;
 		::fprintf(stdout, "TX Level: %u%%" EOL, m_txLevel);
 		return writeConfig();
