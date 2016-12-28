@@ -117,13 +117,17 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20161021" EOL);
+				::fprintf(stdout, "MMDVMCal 20161228" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
 				break;
 			case 'd':
 				setDSTAR();
+				break;
+			case 'S':
+			case 's':
+				setRSSI();
 				break;
 			case -1:
 				break;
@@ -166,7 +170,8 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    T        Increase transmit level" EOL);
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
 	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
-	::fprintf(stdout, "    d        Return to Dstar Mode" EOL);
+	::fprintf(stdout, "    d        D-Star Mode" EOL);
+	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
 }
@@ -301,7 +306,16 @@ bool CMMDVMCal::setDSTAR()
 {
 	m_mode= 99;
 
-	::fprintf(stdout, "Dstar Mode" EOL);
+	::fprintf(stdout, "D-Star Mode" EOL);
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::setRSSI()
+{
+	m_mode = 96;
+
+	::fprintf(stdout, "RSSI Mode" EOL);
 
 	return writeConfig();
 }
@@ -379,10 +393,15 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 	if (buffer[2U] == 0x08U) {
 		bool  inverted = (buffer[3U] == 0x80U);
 		short high = buffer[4U] << 8 | buffer[5U];
-		short low  = buffer[6U] << 8 | buffer[7U];
+		short low = buffer[6U] << 8 | buffer[7U];
 		short diff = high - low;
 		short centre = (high + low) / 2;
 		::fprintf(stdout, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d" EOL, inverted ? "yes" : "no", high, low, diff, centre);
+	} else if (buffer[2U] == 0x09U) {
+		unsigned short max = buffer[3U] << 8 | buffer[4U];
+		unsigned short min = buffer[5U] << 8 | buffer[6U];
+		unsigned short ave = buffer[7U] << 8 | buffer[8U];
+		::fprintf(stdout, "RSSI: max: %u, min: %u, ave: %u" EOL, max, min, ave);
 	} else if (buffer[2U] == 0xF1U) {
 		::fprintf(stdout, "Debug: %.*s" EOL, length - 3U, buffer + 3U);
 	} else if (buffer[2U] == 0xF2U) {
