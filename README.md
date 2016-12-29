@@ -15,7 +15,9 @@ the following commands:
 <tr><td>T</td><td>Increase transmit level</td></tr>
 <tr><td>t</td><td>Decrease transmit level</td></tr>
 <tr><td>D</td><td>Set DMR Deviation Mode. Generates a 1.2Khz Sinewave. Set radio for 2.75 Khz Deviation</td></tr>
-<tr><td>d</td><td>Return to DMR mode</td></tr>
+<tr><td>d</td><td>D-Star mode</td></tr>
+<tr><td>S/s</td><td>RSSI Mode</td></tr>
+<tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
 <tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
 </table>
 
