@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -33,8 +33,8 @@ private:
 	CSerialController m_serial;
 	CConsole          m_console;
 	bool              m_transmit;
-	unsigned char     m_txLevel;
-	unsigned char     m_rxLevel;
+	float             m_txLevel;
+	float             m_rxLevel;
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
