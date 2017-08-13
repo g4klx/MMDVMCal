@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -45,8 +45,8 @@ CMMDVMCal::CMMDVMCal(const std::string& port) :
 m_serial(port, SERIAL_115200),
 m_console(),
 m_transmit(false),
-m_txLevel(50U),
-m_rxLevel(50U),
+m_txLevel(50.0F),
+m_rxLevel(50.0F),
 m_txInvert(false),
 m_rxInvert(false),
 m_pttInvert(false),
@@ -117,7 +117,7 @@ int CMMDVMCal::run()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20161228" EOL);
+				::fprintf(stdout, "MMDVMCal 20170610" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
@@ -150,7 +150,7 @@ int CMMDVMCal::run()
 	m_serial.close();
 	m_console.close();
 
-	::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %u, TX Level: %u" EOL,
+	::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %.1f%%, TX Level: %.1f%%" EOL,
 		m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no",
 		m_rxLevel, m_txLevel);
 
@@ -233,15 +233,15 @@ bool CMMDVMCal::writeConfig()
 	buffer[4U] = 0x00U;
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
-	buffer[7U] = (m_rxLevel * 255U) / 100U;
-	buffer[8U] = (m_txLevel * 255U) / 100U;
+	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
+	buffer[8U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 	buffer[9U] = 0U;
 	buffer[10U] = 0U;
 	buffer[11U] = 128U;
-	buffer[12U] = (m_txLevel * 255U) / 100U;
-	buffer[13U] = (m_txLevel * 255U) / 100U;
-	buffer[14U] = (m_txLevel * 255U) / 100U;
-	buffer[15U] = (m_txLevel * 255U) / 100U;
+	buffer[12U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[13U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[14U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[15U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 
 	int ret = m_serial.write(buffer, 16U);
 	if (ret <= 0)
@@ -322,15 +322,15 @@ bool CMMDVMCal::setRSSI()
 
 bool CMMDVMCal::setRXLevel(int incr)
 {
-	if (incr > 0 && m_rxLevel < 100U) {
-		m_rxLevel++;
-		::fprintf(stdout, "RX Level: %u%%" EOL, m_rxLevel);
+	if (incr > 0 && m_rxLevel < 100.0F) {
+		m_rxLevel += 0.5F;
+		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
 		return writeConfig();
 	}
 
-	if (incr < 0 && m_rxLevel > 0U) {
-		m_rxLevel--;
-		::fprintf(stdout, "RX Level: %u%%" EOL, m_rxLevel);
+	if (incr < 0 && m_rxLevel > 0.0F) {
+		m_rxLevel -= 0.5F;
+		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
 		return writeConfig();
 	}
 
@@ -339,15 +339,15 @@ bool CMMDVMCal::setRXLevel(int incr)
 
 bool CMMDVMCal::setTXLevel(int incr)
 {
-	if (incr > 0 && m_txLevel < 100U) {
-		m_txLevel++;
-		::fprintf(stdout, "TX Level: %u%%" EOL, m_txLevel);
+	if (incr > 0 && m_txLevel < 100.0F) {
+		m_txLevel += 0.5F;
+		::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
 		return writeConfig();
 	}
 
-	if (incr < 0 && m_txLevel > 0U) {
-		m_txLevel--;
-		::fprintf(stdout, "TX Level: %u%%" EOL, m_txLevel);
+	if (incr < 0 && m_txLevel > 0.0F) {
+		m_txLevel -= 0.5F;
+		::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
 		return writeConfig();
 	}
 
