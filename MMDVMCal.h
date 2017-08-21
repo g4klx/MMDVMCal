@@ -35,6 +35,7 @@ private:
 	bool              m_transmit;
 	float             m_txLevel;
 	float             m_rxLevel;
+	int               m_txDCOffset;
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
@@ -44,6 +45,7 @@ private:
 	bool setTransmit();
 	bool setTXLevel(int incr);
 	bool setRXLevel(int incr);
+	bool setTXDCOffset(int incr);
 	bool setTXInvert();
 	bool setRXInvert();
 	bool setPTTInvert();
