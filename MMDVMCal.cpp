@@ -47,6 +47,7 @@ m_console(),
 m_transmit(false),
 m_txLevel(50.0F),
 m_rxLevel(50.0F),
+m_txDCOffset(0),
 m_txInvert(false),
 m_rxInvert(false),
 m_pttInvert(false),
@@ -111,13 +112,19 @@ int CMMDVMCal::run()
 			case 'p':
 				setPTTInvert();
 				break;
+			case 'o':
+				setTXDCOffset(-1);
+				break;
+			case 'O':
+				setTXDCOffset(1);
+				break;
 			case 'Q':
 			case 'q':
 				end = true;
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20170610" EOL);
+				::fprintf(stdout, "MMDVMCal 20170821" EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
@@ -150,9 +157,9 @@ int CMMDVMCal::run()
 	m_serial.close();
 	m_console.close();
 
-	::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %.1f%%, TX Level: %.1f%%" EOL,
+	::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d" EOL,
 		m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no",
-		m_rxLevel, m_txLevel);
+		m_rxLevel, m_txLevel, m_txDCOffset);
 
 	return 0;
 }
@@ -163,6 +170,8 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    H/h      Display help" EOL);
 	::fprintf(stdout, "    I        Toggle transmit inversion" EOL);
 	::fprintf(stdout, "    i        Toggle receive inversion" EOL);
+	::fprintf(stdout, "    O        Increase TX DC offset level" EOL);
+	::fprintf(stdout, "    o        Decrease TX DC offset level" EOL);
 	::fprintf(stdout, "    P/p      Toggle PTT inversion" EOL);
 	::fprintf(stdout, "    Q/q      Quit" EOL);
 	::fprintf(stdout, "    R        Increase receive level" EOL);
@@ -221,7 +230,7 @@ bool CMMDVMCal::writeConfig()
 	unsigned char buffer[50U];
 
 	buffer[0U] = 0xE0U;
-	buffer[1U] = 16U;
+	buffer[1U] = 17U;
 	buffer[2U] = 0x02U;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -242,8 +251,9 @@ bool CMMDVMCal::writeConfig()
 	buffer[13U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 	buffer[14U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 	buffer[15U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[16U] = (unsigned char)(m_txDCOffset + 128);
 
-	int ret = m_serial.write(buffer, 16U);
+	int ret = m_serial.write(buffer, 17U);
 	if (ret <= 0)
 		return false;
 
@@ -348,6 +358,23 @@ bool CMMDVMCal::setTXLevel(int incr)
 	if (incr < 0 && m_txLevel > 0.0F) {
 		m_txLevel -= 0.5F;
 		::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
+		return writeConfig();
+	}
+
+	return true;
+}
+
+bool CMMDVMCal::setTXDCOffset(int incr)
+{
+	if (incr > 0 && m_txDCOffset < 127) {
+		m_txDCOffset++;
+		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
+		return writeConfig();
+	}
+
+	if (incr < 0 && m_txDCOffset > -128) {
+		m_txDCOffset--;
+		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
 		return writeConfig();
 	}
 
