@@ -36,6 +36,7 @@ private:
 	float             m_txLevel;
 	float             m_rxLevel;
 	int               m_txDCOffset;
+	int               m_rxDCOffset;
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
@@ -46,6 +47,7 @@ private:
 	bool setTXLevel(int incr);
 	bool setRXLevel(int incr);
 	bool setTXDCOffset(int incr);
+	bool setRXDCOffset(int incr);
 	bool setTXInvert();
 	bool setRXInvert();
 	bool setPTTInvert();
