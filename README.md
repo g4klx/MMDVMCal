@@ -10,6 +10,8 @@ the following commands:
 <tr><td>i</td><td>Toggle receive inversion</td></tr>
 <tr><td>O</td><td>Increase TX DC offset level</td></tr>
 <tr><td>o</td><td>Decrease TX DC offset level</td></tr>
+<tr><td>C</td><td>Increase RX DC offset level</td></tr>
+<tr><td>c</td><td>Decrease RX DC offset level</td></tr>
 <tr><td>P/p</td><td>Toggle PTT inversion</td></tr>
 <tr><td>Q/q</td><td>Quit</td></tr>
 <tr><td>R</td><td>Increase receive level</td></tr>
