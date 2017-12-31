@@ -52,6 +52,7 @@ private:
 	bool setRXInvert();
 	bool setPTTInvert();
 	bool setDMRDeviation();
+	bool setLowFrequencyCal();
 	bool setDSTAR();
 	bool setRSSI();
 
