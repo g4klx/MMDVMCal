@@ -53,6 +53,7 @@ private:
 	bool setPTTInvert();
 	bool setDMRDeviation();
 	bool setLowFrequencyCal();
+	bool setDMR1KCal();
 	bool setDSTAR();
 	bool setRSSI();
 

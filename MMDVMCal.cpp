@@ -143,6 +143,10 @@ int CMMDVMCal::run()
 			case 'l':
 				setLowFrequencyCal();
 				break;
+			case 'A':
+			case 'a':
+				setDMR1KCal();
+				break;
 			case 'S':
 			case 's':
 				setRSSI();
@@ -193,6 +197,7 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
 	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    L/l      DMR Low Frequency Mode (80 Hz square wave)" EOL);
+	::fprintf(stdout, "    A/a      DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
@@ -336,7 +341,16 @@ bool CMMDVMCal::setLowFrequencyCal()
 	return writeConfig();
 }
 
-bool CMMDVMCal::setDSTAR()
+bool CMMDVMCal::setDMR1KCal()
+{
+	m_mode=94;
+
+	::fprintf(stdout, "DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::CMMDVMCal::setDSTAR()
 {
 	m_mode= 99;
 
