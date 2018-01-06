@@ -350,7 +350,7 @@ bool CMMDVMCal::setDMR1KCal()
 	return writeConfig();
 }
 
-bool CMMDVMCal::CMMDVMCal::setDSTAR()
+bool CMMDVMCal::setDSTAR()
 {
 	m_mode= 99;
 
