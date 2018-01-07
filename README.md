@@ -20,7 +20,8 @@ the following commands:
 <tr><td>t</td><td>Decrease transmit level</td></tr>
 <tr><td>D</td><td>Set DMR Deviation Mode. Generates a 1.2Khz Sinewave. Set radio for 2.75 Khz Deviation</td></tr>
 <tr><td>L/l</td><td>DMR Low Frequency Mode (80 Hz square wave)</td></tr>
-<tr><td>A/a</td><td>DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)</td></tr>
+<tr><td>A</td><td>DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)</td></tr>
+<tr><td>a</td><td>P25 1011 Hz Test Pattern (NAC293 ID1 TG1)</td></tr>
 <tr><td>d</td><td>D-Star mode</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
