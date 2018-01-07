@@ -144,7 +144,7 @@ int CMMDVMCal::run()
 				setLowFrequencyCal();
 				break;
 			case 'A':
-				setDMR1KCal();
+				setDMRCal1K();
 				break;
 			case 'a':
 				setP25Cal1K();
@@ -344,7 +344,7 @@ bool CMMDVMCal::setLowFrequencyCal()
 	return writeConfig();
 }
 
-bool CMMDVMCal::setDMR1KCal()
+bool CMMDVMCal::setDMRCal1K()
 {
 	m_mode = 94;
 
