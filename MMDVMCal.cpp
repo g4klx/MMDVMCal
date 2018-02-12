@@ -146,6 +146,10 @@ int CMMDVMCal::run()
 			case 'A':
 				setDMRCal1K();
 				break;
+			case 'M':
+			case 'm':
+				setDMRDMO1K();
+				break;
 			case 'a':
 				setP25Cal1K();
 				break;
@@ -199,7 +203,8 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
 	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    L/l      DMR Low Frequency Mode (80 Hz square wave)" EOL);
-	::fprintf(stdout, "    A        DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    A        DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    a        P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
@@ -348,7 +353,16 @@ bool CMMDVMCal::setDMRCal1K()
 {
 	m_mode = 94;
 
-	::fprintf(stdout, "DMR 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::setDMRDMO1K()
+{
+	m_mode = 92;
+
+	::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
 	return writeConfig();
 }
