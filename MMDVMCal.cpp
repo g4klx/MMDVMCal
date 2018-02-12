@@ -153,6 +153,10 @@ int CMMDVMCal::run()
 			case 'a':
 				setP25Cal1K();
 				break;
+			case 'N':
+			case 'n':
+				setNXDNCal1K();
+				break;
 			case 'S':
 			case 's':
 				setRSSI();
@@ -206,6 +210,7 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    A        DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    a        P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
+	::fprintf(stdout, "    N/n      NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
@@ -257,7 +262,7 @@ bool CMMDVMCal::writeConfig()
 	unsigned char buffer[50U];
 
 	buffer[0U] = 0xE0U;
-	buffer[1U] = 18U;
+	buffer[1U] = 19U;
 	buffer[2U] = 0x02U;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -280,8 +285,9 @@ bool CMMDVMCal::writeConfig()
 	buffer[15U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 	buffer[16U] = (unsigned char)(m_txDCOffset + 128);
 	buffer[17U] = (unsigned char)(m_rxDCOffset + 128);
+	buffer[18U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
 
-	int ret = m_serial.write(buffer, 18U);
+	int ret = m_serial.write(buffer, 19U);
 	if (ret <= 0)
 		return false;
 
@@ -372,6 +378,15 @@ bool CMMDVMCal::setP25Cal1K()
 	m_mode = 93;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
+
+	return writeConfig();
+}
+
+bool CMMDVMCal::setNXDNCal1K()
+{
+	m_mode = 91;
+
+	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
 	return writeConfig();
 }

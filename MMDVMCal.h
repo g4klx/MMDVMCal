@@ -40,7 +40,7 @@ private:
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
-	unsigned char	  m_mode;
+	unsigned char     m_mode;
 
 	void displayHelp();
 	bool setTransmit();
@@ -56,6 +56,7 @@ private:
 	bool setDMRCal1K();
 	bool setDMRDMO1K();
 	bool setP25Cal1K();
+	bool setNXDNCal1K();
 	bool setDSTAR();
 	bool setRSSI();
 
