@@ -54,6 +54,7 @@ private:
 	bool setDMRDeviation();
 	bool setLowFrequencyCal();
 	bool setDMRCal1K();
+	bool setDMRDMO1K();
 	bool setP25Cal1K();
 	bool setDSTAR();
 	bool setRSSI();
