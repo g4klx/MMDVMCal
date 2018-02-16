@@ -23,6 +23,7 @@
 #include "Console.h"
 
 #include <cstring>
+#include <cstdlib>
 
 enum RESP_TYPE_MMDVM {
 	RTM_OK,
@@ -57,6 +58,7 @@ private:
 	CSerialController m_serial;
 	CConsole          m_console;
 	bool              m_transmit;
+	bool              m_carrier;
 	float             m_txLevel;
 	float             m_rxLevel;
 	int               m_txDCOffset;
@@ -64,13 +66,19 @@ private:
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
+	unsigned int      m_frequency;
+	unsigned int      m_startfrequency;
+	float             m_power;
 	MMDVM_STATE       m_mode;
 	unsigned char*    m_buffer;
 	unsigned int      m_length;
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
 
-	void displayHelp();
+	void displayHelp_MMDVM();
+	void displayHelp_MMDVM_HS();
+	void loop_MMDVM();
+	void loop_MMDVM_HS();
 	bool setTransmit();
 	bool setTXLevel(int incr);
 	bool setRXLevel(int incr);
@@ -79,6 +87,10 @@ private:
 	bool setTXInvert();
 	bool setRXInvert();
 	bool setPTTInvert();
+	bool setFreq(int incr);
+	bool setPower(int incr);
+	bool setCarrier();
+	bool setEnterFreq();
 	bool setDMRDeviation();
 	bool setLowFrequencyCal();
 	bool setDMRCal1K();
@@ -90,8 +102,9 @@ private:
 
 	bool initModem();
 	void displayModem(const unsigned char* buffer, unsigned int length);
-	bool writeConfig();
+	bool writeConfig(float txlevel);
 	void sleep(unsigned int ms);
+	bool setFrequency();
 	RESP_TYPE_MMDVM getResponse();
 };
 

@@ -27,6 +27,8 @@
 #define	EOL	"\r\n"
 #endif
 
+#include "Utils.h"
+
 const unsigned char MMDVM_FRAME_START = 0xE0U;
 const unsigned char MMDVM_GET_VERSION = 0x00U;
 const unsigned char MMDVM_SET_CONFIG  = 0x02U;
@@ -38,8 +40,6 @@ const unsigned char MMDVM_NAK         = 0x7FU;
 
 const unsigned int MAX_RESPONSES = 30U;
 const unsigned int BUFFER_LENGTH = 2000U;
-
-#include "Utils.h"
 
 int main(int argc, char** argv)
 {
@@ -57,6 +57,7 @@ CMMDVMCal::CMMDVMCal(const std::string& port) :
 m_serial(port, SERIAL_115200),
 m_console(),
 m_transmit(false),
+m_carrier(false),
 m_txLevel(50.0F),
 m_rxLevel(50.0F),
 m_txDCOffset(0),
@@ -64,6 +65,9 @@ m_rxDCOffset(0),
 m_txInvert(false),
 m_rxInvert(false),
 m_pttInvert(false),
+m_frequency(433000000U),
+m_startfrequency(433000000U),
+m_power(100.0F),
 m_mode(STATE_DSTARCAL),
 m_buffer(NULL),
 m_length(0U),
@@ -94,7 +98,32 @@ int CMMDVMCal::run()
 		return 1;
 	}
 
-	displayHelp();
+	if (m_hwType == HWT_MMDVM)
+		loop_MMDVM();
+	else if (m_hwType == HWT_MMDVM_HS)
+		loop_MMDVM_HS();
+
+	if (m_transmit)
+		setTransmit();
+
+	m_serial.close();
+	m_console.close();
+
+	if (m_hwType == HWT_MMDVM) {
+		::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d" EOL,
+			m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no",
+			m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
+	}
+	else if (m_hwType == HWT_MMDVM_HS) {
+		::fprintf(stdout, "TX Level: %.1f%%, Frequency Offset: %d, RF Level: %.1f%%" EOL, m_txLevel, (int)(m_frequency - m_startfrequency), m_power);
+	}
+
+	return 0;
+}
+
+void CMMDVMCal::loop_MMDVM()
+{
+	displayHelp_MMDVM();
 
 	bool end = false;
 	while (!end) {
@@ -102,7 +131,7 @@ int CMMDVMCal::run()
 		switch (c) {
 			case 'H':
 			case 'h':
-				displayHelp();
+				displayHelp_MMDVM();
 				break;
 			case 'T':
 				setTXLevel(1);
@@ -191,21 +220,9 @@ int CMMDVMCal::run()
 
 		sleep(5U);
 	}
-
-	if (m_transmit)
-		setTransmit();
-
-	m_serial.close();
-	m_console.close();
-
-	::fprintf(stdout, "PTT Invert: %s, RX Invert: %s, TX Invert: %s, RX Level: %.1f%%, TX Level: %.1f%%, TX DC Offset: %d, RX DC Offset: %d" EOL,
-		m_pttInvert ? "yes" : "no", m_rxInvert ? "yes" : "no", m_txInvert ? "yes" : "no",
-		m_rxLevel, m_txLevel, m_txDCOffset, m_rxDCOffset);
-
-	return 0;
 }
 
-void CMMDVMCal::displayHelp()
+void CMMDVMCal::displayHelp_MMDVM()
 {
 	::fprintf(stdout, "The commands are:" EOL);
 	::fprintf(stdout, "    H/h      Display help" EOL);
@@ -229,6 +246,98 @@ void CMMDVMCal::displayHelp()
 	::fprintf(stdout, "    N/n      NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
+	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
+	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
+}
+
+void CMMDVMCal::loop_MMDVM_HS()
+{
+	m_mode = STATE_DMRCAL;
+	
+	setFrequency();
+	writeConfig(m_txLevel);
+
+	displayHelp_MMDVM_HS();
+
+	bool end = false;
+	while (!end) {
+		int c = m_console.getChar();
+		switch (c) {
+			case 'H':
+			case 'h':
+				displayHelp_MMDVM_HS();
+				break;
+			case 'C':
+			case 'c':
+				setCarrier();
+				break;
+			case 'E':
+			case 'e':
+				setEnterFreq();
+				break;
+			case 'T':
+				setTXLevel(1);
+				break;
+			case 't':
+				setTXLevel(-1);
+				break;
+			case 'F':
+				setFreq(1);
+				break;
+			case 'f':
+				setFreq(-1);
+				break;
+			case 'P':
+				setPower(1);
+				break;
+			case 'p':
+				setPower(-1);
+				break;
+			case ' ':
+				setTransmit();
+				break;
+			case 'Q':
+			case 'q':
+				end = true;
+				break;
+			case 'V':
+			case 'v':
+				::fprintf(stdout, "MMDVMCal 20170821" EOL);
+				break;
+			case 'D':
+			case 'd':
+				setDMRDeviation();
+				break;
+			case 'M':
+			case 'm':
+				setDMRDMO1K();
+				break;
+			case -1:
+				break;
+			default:
+				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
+				break;
+		}
+
+		sleep(5U);
+	}
+}
+
+void CMMDVMCal::displayHelp_MMDVM_HS()
+{
+	::fprintf(stdout, "The commands are:" EOL);
+	::fprintf(stdout, "    H/h      Display help" EOL);
+	::fprintf(stdout, "    Q/q      Quit" EOL);
+	::fprintf(stdout, "    E/e      Enter frequency (current: %u Hz)" EOL, m_frequency);
+	::fprintf(stdout, "    F        Increase frequency" EOL);
+	::fprintf(stdout, "    f        Decrease frequency" EOL);
+	::fprintf(stdout, "    T        Increase deviation" EOL);
+	::fprintf(stdout, "    t        Decrease deviation" EOL);
+	::fprintf(stdout, "    P        Increase RF power" EOL);
+	::fprintf(stdout, "    p        Decrease RF power" EOL);
+	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
+	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
+	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
 }
@@ -266,7 +375,7 @@ bool CMMDVMCal::initModem()
 					return false;
 				}
 
-				return writeConfig();
+				return writeConfig(m_txLevel);
 
 				return true;
 			}
@@ -280,7 +389,7 @@ bool CMMDVMCal::initModem()
 	return false;
 }
 
-bool CMMDVMCal::writeConfig()
+bool CMMDVMCal::writeConfig(float txlevel)
 {
 	unsigned char buffer[50U];
 
@@ -298,17 +407,17 @@ bool CMMDVMCal::writeConfig()
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
 	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
-	buffer[8U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[8U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[9U] = 0U;
 	buffer[10U] = 0U;
 	buffer[11U] = 128U;
-	buffer[12U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
-	buffer[13U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
-	buffer[14U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
-	buffer[15U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[12U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[13U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[14U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[15U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[16U] = (unsigned char)(m_txDCOffset + 128);
 	buffer[17U] = (unsigned char)(m_rxDCOffset + 128);
-	buffer[18U] = (unsigned char)(m_txLevel * 2.55F + 0.5F);
+	buffer[18U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 
 	int ret = m_serial.write(buffer, 19U);
 	if (ret <= 0)
@@ -343,7 +452,7 @@ bool CMMDVMCal::setRXInvert()
 
 	::fprintf(stdout, "RX Invert: %s" EOL, m_rxInvert ? "On" : "Off");
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setTXInvert()
@@ -352,7 +461,7 @@ bool CMMDVMCal::setTXInvert()
 
 	::fprintf(stdout, "TX Invert: %s" EOL, m_txInvert ? "On" : "Off");
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setPTTInvert()
@@ -361,79 +470,132 @@ bool CMMDVMCal::setPTTInvert()
 
 	::fprintf(stdout, "PTT Invert: %s" EOL, m_pttInvert ? "On" : "Off");
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setDMRDeviation()
 {
 	m_mode = STATE_DMRCAL;
+	m_carrier = false;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setLowFrequencyCal()
 {
 	m_mode = STATE_LFCAL;
+	m_carrier = false;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setDMRCal1K()
 {
 	m_mode = STATE_DMRCAL1K;
+	m_carrier = false;
 
 	::fprintf(stdout, "DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setDMRDMO1K()
 {
-	m_mode = STATE_DMRDMO1K;
+	if (m_transmit && (m_hwType == HWT_MMDVM_HS)) {
+		::fprintf(stdout, "First turn off the transmitter" EOL);
+		return false;
+	}
+	else {
+		m_mode = STATE_DMRDMO1K;
+		m_carrier = false;
 
-	::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+		::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
-	return writeConfig();
+		return writeConfig(m_txLevel);
+	}
 }
 
 bool CMMDVMCal::setP25Cal1K()
 {
 	m_mode = STATE_P25CAL1K;
+	m_carrier = false;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setNXDNCal1K()
 {
 	m_mode = STATE_NXDNCAL1K;
+	m_carrier = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setDSTAR()
 {
 	m_mode = STATE_DSTARCAL;
+	m_carrier = false;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setRSSI()
 {
 	m_mode = STATE_RSSICAL;
+	m_carrier = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
-	return writeConfig();
+	return writeConfig(m_txLevel);
+}
+
+bool CMMDVMCal::setCarrier()
+{
+	m_mode = STATE_DMRCAL;
+	m_carrier = true;
+
+	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
+
+	return writeConfig(0.0F);
+}
+
+bool CMMDVMCal::setEnterFreq()
+{
+	char buff[256U];
+
+	::fprintf(stdout, "Enter frequency (current %u Hz):" EOL, m_frequency);
+
+	m_console.close();
+
+	if (std::fgets(buff, 256, stdin) != NULL ) {
+
+		unsigned long int freq = std::strtoul(buff, NULL, 10);
+	
+		if (freq >= 100000000U && freq <= 999999999U) {
+			m_frequency = (unsigned int)freq;
+			m_startfrequency = m_frequency;
+			::fprintf(stdout, "New frequency: %u Hz" EOL, m_frequency);
+			setFrequency();
+		}
+		else
+			::fprintf(stdout, "Not valid frequency" EOL);
+	}
+
+	m_console.open();
+
+	displayHelp_MMDVM_HS();
+
+	return writeConfig(m_txLevel);
 }
 
 bool CMMDVMCal::setRXLevel(int incr)
@@ -441,13 +603,13 @@ bool CMMDVMCal::setRXLevel(int incr)
 	if (incr > 0 && m_rxLevel < 100.0F) {
 		m_rxLevel += 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	if (incr < 0 && m_rxLevel > 0.0F) {
 		m_rxLevel -= 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	return true;
@@ -455,16 +617,66 @@ bool CMMDVMCal::setRXLevel(int incr)
 
 bool CMMDVMCal::setTXLevel(int incr)
 {
-	if (incr > 0 && m_txLevel < 100.0F) {
-		m_txLevel += 0.5F;
-		::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-		return writeConfig();
+	if (!m_carrier) {
+		if (incr > 0 && m_txLevel < 100.0F) {
+			m_txLevel += 0.5F;
+			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
+			return writeConfig(m_txLevel);
+		}
+
+		if (incr < 0 && m_txLevel > 0.0F) {
+			m_txLevel -= 0.5F;
+			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
+			return writeConfig(m_txLevel);
+		}
 	}
 
-	if (incr < 0 && m_txLevel > 0.0F) {
-		m_txLevel -= 0.5F;
-		::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-		return writeConfig();
+	return true;
+}
+
+bool CMMDVMCal::setFreq(int incr)
+{
+	bool ret;
+
+	if (incr > 0) {
+		m_frequency += 50;
+		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
+		setFrequency();
+		if (m_carrier)
+			ret = writeConfig(0.0F);
+		else
+			ret = writeConfig(m_txLevel);
+		return ret;
+	}
+
+	if (incr < 0) {
+		m_frequency -= 50;
+		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
+		setFrequency();
+		if (m_carrier)
+			ret = writeConfig(0.0F);
+		else
+			ret = writeConfig(m_txLevel);
+		return ret;
+	}
+
+	return true;
+}
+
+bool CMMDVMCal::setPower(int incr)
+{
+	if (incr > 0 && m_power < 100.0F) {
+		m_power += 1.0F;
+		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
+		setFrequency();
+		return writeConfig(m_txLevel);
+	}
+
+	if (incr < 0 && m_power > 0.0F) {
+		m_power -= 1.0F;
+		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
+		setFrequency();
+		return writeConfig(m_txLevel);
 	}
 
 	return true;
@@ -475,13 +687,13 @@ bool CMMDVMCal::setTXDCOffset(int incr)
 	if (incr > 0 && m_txDCOffset < 127) {
 		m_txDCOffset++;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	if (incr < 0 && m_txDCOffset > -128) {
 		m_txDCOffset--;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	return true;
@@ -492,13 +704,13 @@ bool CMMDVMCal::setRXDCOffset(int incr)
 	if (incr > 0 && m_rxDCOffset < 127) {
 		m_rxDCOffset++;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	if (incr < 0 && m_rxDCOffset > -128) {
 		m_rxDCOffset--;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig();
+		return writeConfig(m_txLevel);
 	}
 
 	return true;
@@ -579,6 +791,57 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 	} else {
 		CUtils::dump("Response", buffer, length);
 	}
+}
+
+bool CMMDVMCal::setFrequency()
+{
+	unsigned char buffer[16U];
+
+	buffer[0U]  = MMDVM_FRAME_START;
+
+	buffer[1U]  = 13U;
+
+	buffer[2U]  = MMDVM_SET_FREQ;
+
+	buffer[3U]  = 0x00U;
+
+	buffer[4U]  = (m_frequency >> 0) & 0xFFU;
+	buffer[5U]  = (m_frequency >> 8) & 0xFFU;
+	buffer[6U]  = (m_frequency >> 16) & 0xFFU;
+	buffer[7U]  = (m_frequency >> 24) & 0xFFU;
+
+	buffer[8U]  = (m_frequency >> 0) & 0xFFU;
+	buffer[9U]  = (m_frequency >> 8) & 0xFFU;
+	buffer[10U] = (m_frequency >> 16) & 0xFFU;
+	buffer[11U] = (m_frequency >> 24) & 0xFFU;
+
+	buffer[12U]  = (unsigned char)(m_power * 2.55F + 0.5F);
+
+	int ret = m_serial.write(buffer, 13U);
+	if (ret != 13U)
+		return false;
+
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
+
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stderr, "The MMDVM is not responding to the SET_FREQ command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
+
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stderr, "Received a NAK to the SET_FREQ command from the modem, %u" EOL, m_buffer[4U]);
+		return false;
+	}
+
+	return true;
 }
 
 RESP_TYPE_MMDVM CMMDVMCal::getResponse()
