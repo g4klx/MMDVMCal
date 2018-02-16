@@ -145,12 +145,14 @@
     <ClInclude Include="Console.h" />
     <ClInclude Include="MMDVMCal.h" />
     <ClInclude Include="SerialController.h" />
+    <ClInclude Include="SerialPort.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Console.cpp" />
     <ClCompile Include="MMDVMCal.cpp" />
     <ClCompile Include="SerialController.cpp" />
+    <ClCompile Include="SerialPort.cpp" />
     <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
