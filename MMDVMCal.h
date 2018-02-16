@@ -22,6 +22,8 @@
 #include "SerialController.h"
 #include "Console.h"
 
+#include <cstring>
+
 enum RESP_TYPE_MMDVM {
 	RTM_OK,
 	RTM_TIMEOUT,

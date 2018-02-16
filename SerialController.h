@@ -23,6 +23,7 @@
 #include "SerialPort.h"
 
 #include <string>
+#include <cstdio>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
