@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2002-2004,2007-2011,2013,2014-2016 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2002-2004,2007-2011,2013,2014-2017 by Jonathan Naylor G4KLX
  *   Copyright (C) 1999-2001 by Thomas Sailor HB9JNX
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -19,8 +19,8 @@
 
 #include "SerialController.h"
 
+#include <cstring>
 #include <cassert>
-#include <cstdio>
 
 #include <sys/types.h>
 
@@ -36,30 +36,26 @@
 #include <termios.h>
 #endif
 
+#if defined(_WIN32) || defined(_WIN64)
+#define EOL	"\n"
+#else
+#include <unistd.h>
+#define	EOL	"\r\n"
+#endif
 
 #if defined(_WIN32) || defined(_WIN64)
-
-const unsigned int BUFFER_LENGTH = 1000U;
 
 CSerialController::CSerialController(const std::string& device, SERIAL_SPEED speed, bool assertRTS) :
 m_device(device),
 m_speed(speed),
 m_assertRTS(assertRTS),
-m_handle(INVALID_HANDLE_VALUE),
-m_readOverlapped(),
-m_writeOverlapped(),
-m_readBuffer(NULL),
-m_readLength(0U),
-m_readPending(false)
+m_handle(INVALID_HANDLE_VALUE)
 {
 	assert(!device.empty());
-
-	m_readBuffer = new unsigned char[BUFFER_LENGTH];
 }
 
 CSerialController::~CSerialController()
 {
-	delete[] m_readBuffer;
 }
 
 bool CSerialController::open()
@@ -70,34 +66,35 @@ bool CSerialController::open()
 
 	std::string baseName = m_device.substr(4U);		// Convert "\\.\COM10" to "COM10"
 
-	m_handle = ::CreateFileA(m_device.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+	m_handle = ::CreateFileA(m_device.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (m_handle == INVALID_HANDLE_VALUE) {
-		::fprintf(stderr, "Cannot open device - %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot open device - %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		return false;
 	}
 
 	DCB dcb;
 	if (::GetCommState(m_handle, &dcb) == 0) {
-		::fprintf(stderr, "Cannot get the attributes for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot get the attributes for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
 	}
 
-	dcb.BaudRate     = DWORD(m_speed);
-	dcb.ByteSize     = 8;
-	dcb.Parity       = NOPARITY;
-	dcb.fParity      = FALSE;
-	dcb.StopBits     = ONESTOPBIT;
-	dcb.fInX         = FALSE;
-	dcb.fOutX        = FALSE;
-	dcb.fOutxCtsFlow = FALSE;
-	dcb.fOutxDsrFlow = FALSE;
-	dcb.fDtrControl  = DTR_CONTROL_DISABLE;
-	dcb.fRtsControl  = RTS_CONTROL_DISABLE;
+	dcb.BaudRate        = DWORD(m_speed);
+	dcb.ByteSize        = 8;
+	dcb.Parity          = NOPARITY;
+	dcb.fParity         = FALSE;
+	dcb.StopBits        = ONESTOPBIT;
+	dcb.fInX            = FALSE;
+	dcb.fOutX           = FALSE;
+	dcb.fOutxCtsFlow    = FALSE;
+	dcb.fOutxDsrFlow    = FALSE;
+	dcb.fDsrSensitivity = FALSE;
+	dcb.fDtrControl     = DTR_CONTROL_DISABLE;
+	dcb.fRtsControl     = RTS_CONTROL_DISABLE;
 
 	if (::SetCommState(m_handle, &dcb) == 0) {
-		::fprintf(stderr, "Cannot set the attributes for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot set the attributes for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
@@ -105,7 +102,7 @@ bool CSerialController::open()
 
 	COMMTIMEOUTS timeouts;
 	if (!::GetCommTimeouts(m_handle, &timeouts)) {
-		::fprintf(stderr, "Cannot get the timeouts for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot get the timeouts for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
@@ -116,37 +113,27 @@ bool CSerialController::open()
 	timeouts.ReadTotalTimeoutConstant   = 0UL;
 
 	if (!::SetCommTimeouts(m_handle, &timeouts)) {
-		::fprintf(stderr, "Cannot set the timeouts for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot set the timeouts for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
 	}
 
 	if (::EscapeCommFunction(m_handle, CLRDTR) == 0) {
-		::fprintf(stderr, "Cannot clear DTR for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot clear DTR for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
 	}
 
 	if (::EscapeCommFunction(m_handle, m_assertRTS ? SETRTS : CLRRTS) == 0) {
-		::fprintf(stderr, "Cannot set/clear RTS for %s, err=%04lx\n", m_device.c_str(), ::GetLastError());
+		::fprintf(stderr, "Cannot set/clear RTS for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		::ClearCommError(m_handle, &errCode, NULL);
 		::CloseHandle(m_handle);
 		return false;
 	}
 
 	::ClearCommError(m_handle, &errCode, NULL);
-
-	::memset(&m_readOverlapped, 0x00U, sizeof(OVERLAPPED));
-	::memset(&m_writeOverlapped, 0x00U, sizeof(OVERLAPPED));
-
-	m_readOverlapped.hEvent  = ::CreateEvent(NULL, TRUE, FALSE, NULL);
-	m_writeOverlapped.hEvent = ::CreateEvent(NULL, TRUE, FALSE, NULL);
-
-	m_readLength  = 0U;
-	m_readPending = false;
-	::memset(m_readBuffer, 0x00U, BUFFER_LENGTH);
 
 	return true;
 }
@@ -178,49 +165,29 @@ int CSerialController::readNonblock(unsigned char* buffer, unsigned int length)
 	assert(m_handle != INVALID_HANDLE_VALUE);
 	assert(buffer != NULL);
 
-	if (length > BUFFER_LENGTH)
-		length = BUFFER_LENGTH;
-
-	if (m_readPending && length != m_readLength) {
-		::CancelIo(m_handle);
-		m_readPending = false;
-	}
-
-	m_readLength = length;
-
 	if (length == 0U)
 		return 0;
 
-	if (!m_readPending) {
-		DWORD bytes = 0UL;
-		BOOL res = ::ReadFile(m_handle, m_readBuffer, m_readLength, &bytes, &m_readOverlapped);
-		if (res) {
-			::memcpy(buffer, m_readBuffer, bytes);
-			return int(bytes);
-		}
-
-		DWORD error = ::GetLastError();
-		if (error != ERROR_IO_PENDING) {
-			::fprintf(stderr, "Error from ReadFile: %04lx\n", error);
-			return -1;
-		}
-
-		m_readPending = true;
-	}
-
-	BOOL res = HasOverlappedIoCompleted(&m_readOverlapped);
-	if (!res)
-		return 0;
-
-	DWORD bytes = 0UL;
-	res = ::GetOverlappedResult(m_handle, &m_readOverlapped, &bytes, TRUE);
-	if (!res) {
-		::fprintf(stderr, "Error from GetOverlappedResult (ReadFile): %04lx\n", ::GetLastError());
+	DWORD errors;
+	COMSTAT status;
+	if (::ClearCommError(m_handle, &errors, &status) == 0) {
+		::fprintf(stderr, "Error from ClearCommError for %s, err=%04lx" EOL, m_device.c_str(), ::GetLastError());
 		return -1;
 	}
 
-	::memcpy(buffer, m_readBuffer, bytes);
-	m_readPending = false;
+	if (status.cbInQue == 0UL)
+		return 0;
+
+	DWORD readLength = status.cbInQue;
+	if (length < readLength)
+		readLength = length;
+
+	DWORD bytes = 0UL;
+	BOOL ret = ::ReadFile(m_handle, buffer, readLength, &bytes, NULL);
+	if (!ret) {
+		::fprintf(stderr, "Error from ReadFile for %s: %04lx" EOL, m_device.c_str(), ::GetLastError());
+		return -1;
+	}
 
 	return int(bytes);
 }
@@ -237,19 +204,10 @@ int CSerialController::write(const unsigned char* buffer, unsigned int length)
 
 	while (ptr < length) {
 		DWORD bytes = 0UL;
-		BOOL res = ::WriteFile(m_handle, buffer + ptr, length - ptr, &bytes, &m_writeOverlapped);
-		if (!res) {
-			DWORD error = ::GetLastError();
-			if (error != ERROR_IO_PENDING) {
-				::fprintf(stderr, "Error from WriteFile: %04lx\n", error);
-				return -1;
-			}
-
-			res = ::GetOverlappedResult(m_handle, &m_writeOverlapped, &bytes, TRUE);
-			if (!res) {
-				::fprintf(stderr, "Error from GetOverlappedResult (WriteFile): %04lx\n", ::GetLastError());
-				return -1;
-			}
+		BOOL ret = ::WriteFile(m_handle, buffer + ptr, length - ptr, &bytes, NULL);
+		if (!ret) {
+			::fprintf(stderr, "Error from WriteFile for %s: %04lx" EOL, m_device.c_str(), ::GetLastError());
+			return -1;
 		}
 
 		ptr += bytes;
@@ -264,9 +222,6 @@ void CSerialController::close()
 
 	::CloseHandle(m_handle);
 	m_handle = INVALID_HANDLE_VALUE;
-
-	::CloseHandle(m_readOverlapped.hEvent);
-	::CloseHandle(m_writeOverlapped.hEvent);
 }
 
 #else
@@ -287,26 +242,46 @@ CSerialController::~CSerialController()
 bool CSerialController::open()
 {
 	assert(m_fd == -1);
-
+#if defined(__APPLE__)
+	m_fd = ::open(m_device.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK); /*open in block mode under OSX*/
+#else
 	m_fd = ::open(m_device.c_str(), O_RDWR | O_NOCTTY | O_NDELAY, 0);
+#endif
 	if (m_fd < 0) {
-		::fprintf(stderr, "Cannot open device - %s\r\n", m_device.c_str());
+		::fprintf(stderr, "Cannot open device - %s" EOL, m_device.c_str());
 		return false;
 	}
 
 	if (::isatty(m_fd) == 0) {
-		::fprintf(stderr, "%s is not a TTY device\r\n", m_device.c_str());
+		::fprintf(stderr, "%s is not a TTY device" EOL, m_device.c_str());
 		::close(m_fd);
 		return false;
 	}
 
 	termios termios;
 	if (::tcgetattr(m_fd, &termios) < 0) {
-		::fprintf(stderr, "Cannot get the attributes for %s\r\n", m_device.c_str());
+		::fprintf(stderr, "Cannot get the attributes for %s" EOL, m_device.c_str());
 		::close(m_fd);
 		return false;
 	}
 
+	#if defined(__APPLE__)
+	termios.c_cflag |= (CLOCAL | CREAD);    /* ignore modem controls */
+	termios.c_cflag &= ~CSIZE;
+	termios.c_cflag |= CS8;         /* 8-bit characters */
+	termios.c_cflag &= ~PARENB;     /* no parity bit */
+	termios.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
+	termios.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
+
+    /* setup for non-canonical mode */
+	termios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	termios.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	termios.c_oflag &= ~OPOST;
+
+    /* fetch bytes as they become available */
+	termios.c_cc[VMIN] = 1;
+	termios.c_cc[VTIME] = 1;
+#else
 	termios.c_lflag    &= ~(ECHO | ECHOE | ICANON | IEXTEN | ISIG);
 	termios.c_iflag    &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON | IXOFF | IXANY);
 	termios.c_cflag    &= ~(CSIZE | CSTOPB | PARENB | CRTSCTS);
@@ -314,6 +289,7 @@ bool CSerialController::open()
 	termios.c_oflag    &= ~(OPOST);
 	termios.c_cc[VMIN]  = 0;
 	termios.c_cc[VTIME] = 10;
+#endif
 
 	switch (m_speed) {
 		case SERIAL_1200:
@@ -349,13 +325,13 @@ bool CSerialController::open()
 			::cfsetispeed(&termios, B230400);
 			break;
 		default:
-			::fprintf(stderr, "Unsupported serial port speed - %d\r\n", int(m_speed));
+			::fprintf(stderr, "Unsupported serial port speed - %d" EOL, int(m_speed));
 			::close(m_fd);
 			return false;
 	}
 
 	if (::tcsetattr(m_fd, TCSANOW, &termios) < 0) {
-		::fprintf(stderr, "Cannot set the attributes for %s\r\n", m_device.c_str());
+		::fprintf(stderr, "Cannot set the attributes for %s" EOL, m_device.c_str());
 		::close(m_fd);
 		return false;
 	}
@@ -363,7 +339,7 @@ bool CSerialController::open()
 	if (m_assertRTS) {
 		unsigned int y;
 		if (::ioctl(m_fd, TIOCMGET, &y) < 0) {
-			::fprintf(stderr, "Cannot get the control attributes for %s\r\n", m_device.c_str());
+			::fprintf(stderr, "Cannot get the control attributes for %s" EOL, m_device.c_str());
 			::close(m_fd);
 			return false;
 		}
@@ -371,14 +347,32 @@ bool CSerialController::open()
 		y |= TIOCM_RTS;
                                                                                 
 		if (::ioctl(m_fd, TIOCMSET, &y) < 0) {
-			::fprintf(stderr, "Cannot set the control attributes for %s\r\n", m_device.c_str());
+			::fprintf(stderr, "Cannot set the control attributes for %s" EOL, m_device.c_str());
 			::close(m_fd);
 			return false;
 		}
 	}
 
+#if defined(__APPLE__)
+	setNonblock(false);
+#endif
+
 	return true;
 }
+
+#if defined(__APPLE__)
+int CSerialController::setNonblock(bool nonblock)
+{
+	int flag = ::fcntl(m_fd, F_GETFD, 0);
+
+	if (nonblock)
+		flag |= O_NONBLOCK;
+	else
+		flag &= ~O_NONBLOCK;
+
+	return ::fcntl(m_fd, F_SETFL, flag);
+}
+#endif
 
 int CSerialController::read(unsigned char* buffer, unsigned int length)
 {
@@ -394,13 +388,11 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 		fd_set fds;
 		FD_ZERO(&fds);
 		FD_SET(m_fd, &fds);
-
 		int n;
 		if (offset == 0U) {
 			struct timeval tv;
 			tv.tv_sec  = 0;
 			tv.tv_usec = 0;
-
 			n = ::select(m_fd + 1, &fds, NULL, NULL, &tv);
 			if (n == 0)
 				return 0;
@@ -409,7 +401,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 		}
 
 		if (n < 0) {
-			::fprintf(stderr, "Error from select(), errno=%d\r\n", errno);
+			::fprintf(stderr, "Error from select(), errno=%d" EOL, errno);
 			return -1;
 		}
 
@@ -417,7 +409,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 			ssize_t len = ::read(m_fd, buffer + offset, length - offset);
 			if (len < 0) {
 				if (errno != EAGAIN) {
-					::fprintf(stderr, "Error from read(), errno=%d\r\n", errno);
+					::fprintf(stderr, "Error from read(), errno=%d" EOL, errno);
 					return -1;
 				}
 			}
@@ -430,6 +422,26 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 	return length;
 }
 
+bool CSerialController::canWrite(){
+#if defined(__APPLE__)
+	fd_set wset;
+	FD_ZERO(&wset);
+	FD_SET(m_fd, &wset);
+
+	struct timeval timeo;
+	timeo.tv_sec  = 0;
+	timeo.tv_usec = 0;
+
+	int rc = select(m_fd + 1, NULL, &wset, NULL, &timeo);
+	if (rc >0 && FD_ISSET(m_fd, &wset))
+		return true;
+
+	return false;
+#else
+	return true;
+#endif
+}
+
 int CSerialController::write(const unsigned char* buffer, unsigned int length)
 {
 	assert(buffer != NULL);
@@ -439,12 +451,13 @@ int CSerialController::write(const unsigned char* buffer, unsigned int length)
 		return 0;
 
 	unsigned int ptr = 0U;
-
 	while (ptr < length) {
-		ssize_t n = ::write(m_fd, buffer + ptr, length - ptr);
+		ssize_t n = 0U;
+		if (canWrite())
+			n = ::write(m_fd, buffer + ptr, length - ptr);
 		if (n < 0) {
 			if (errno != EAGAIN) {
-				::fprintf(stderr, "Error returned from write(), errno=%d\r\n", errno);
+				::fprintf(stderr, "Error returned from write(), errno=%d" EOL, errno);
 				return -1;
 			}
 		}

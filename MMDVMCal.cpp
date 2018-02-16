@@ -27,6 +27,18 @@
 #define	EOL	"\r\n"
 #endif
 
+const unsigned char MMDVM_FRAME_START = 0xE0U;
+const unsigned char MMDVM_GET_VERSION = 0x00U;
+const unsigned char MMDVM_SET_CONFIG  = 0x02U;
+const unsigned char MMDVM_SET_FREQ    = 0x04U;
+const unsigned char MMDVM_CAL_DATA    = 0x08U;
+
+const unsigned char MMDVM_ACK         = 0x70U;
+const unsigned char MMDVM_NAK         = 0x7FU;
+
+const unsigned int MAX_RESPONSES = 30U;
+const unsigned int BUFFER_LENGTH = 2000U;
+
 #include "Utils.h"
 
 int main(int argc, char** argv)
@@ -52,8 +64,12 @@ m_rxDCOffset(0),
 m_txInvert(false),
 m_rxInvert(false),
 m_pttInvert(false),
-m_mode(99U)
+m_mode(STATE_DSTARCAL),
+m_buffer(NULL),
+m_length(0U),
+m_offset(0U)
 {
+	m_buffer = new unsigned char[BUFFER_LENGTH];
 }
 
 CMMDVMCal::~CMMDVMCal()
@@ -168,10 +184,10 @@ int CMMDVMCal::run()
 				break;
 		}
 
-		unsigned char buffer[130U];
-		int n = readModem(buffer, 130U);
-		if (n > 0)
-			displayModem(buffer, n);
+		RESP_TYPE_MMDVM resp = getResponse();
+
+		if (resp == RTM_OK)
+			displayModem(m_buffer, m_length);
 
 		sleep(5U);
 	}
@@ -219,51 +235,58 @@ void CMMDVMCal::displayHelp()
 
 bool CMMDVMCal::initModem()
 {
-	unsigned char buffer[150U];
+	sleep(2000U);	// 2s
 
-	sleep(2000U);
+	for (unsigned int i = 0U; i < 6U; i++) {
+		unsigned char buffer[3U];
 
-	int ret = 0;
-	for (unsigned int i = 0U; i < 5U && ret <= 0; i++) {
-		buffer[0U] = 0xE0U;
+		buffer[0U] = MMDVM_FRAME_START;
 		buffer[1U] = 3U;
-		buffer[2U] = 0x00U;
+		buffer[2U] = MMDVM_GET_VERSION;
 
-		ret = m_serial.write(buffer, 3U);
-		if (ret <= 0)
+		int ret = m_serial.write(buffer, 3U);
+		if (ret != 3)
 			return false;
 
-		sleep(100U);
+#if defined(__APPLE__)
+		m_serial.setNonblock(true);
+#endif
 
-		ret = readModem(buffer, 50U);
-		if (ret < 0)
-			return false;
-		if (ret == 0)
-			sleep(1000U);
+		for (unsigned int count = 0U; count < MAX_RESPONSES; count++) {
+			sleep(10U);
+			RESP_TYPE_MMDVM resp = getResponse();
+			if (resp == RTM_OK && m_buffer[2U] == MMDVM_GET_VERSION) {
+				::fprintf(stderr, "Version: %u, description: %.*s" EOL, m_buffer[3U], m_length - 4U, m_buffer + 4U);
+				if (::memcmp(m_buffer + 4U, "MMDVM ", 6U) == 0)
+					m_hwType = HWT_MMDVM;
+				else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0))
+					m_hwType = HWT_MMDVM_HS;
+				else {
+					::fprintf(stderr, "Board not supported" EOL);
+					return false;
+				}
+
+				return writeConfig();
+
+				return true;
+			}
+		}
+
+		sleep(1500U);
 	}
 
-	if (ret <= 0) {
-		::fprintf(stderr, "No response from the modem" EOL);
-		return false;
-	}
+	::fprintf(stderr, "Unable to read the firmware version after six attempts" EOL);
 
-	if (buffer[2U] != 0x00U) {
-		CUtils::dump("Invalid response", buffer, ret);
-		return false;
-	}
-
-	::fprintf(stdout, "Version: %u \"%.*s\"" EOL, buffer[3U], buffer[1U] - 4, buffer + 4U);
-
-	return writeConfig();
+	return false;
 }
 
 bool CMMDVMCal::writeConfig()
 {
 	unsigned char buffer[50U];
 
-	buffer[0U] = 0xE0U;
+	buffer[0U] = MMDVM_FRAME_START;
 	buffer[1U] = 19U;
-	buffer[2U] = 0x02U;
+	buffer[2U] = MMDVM_SET_CONFIG;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
 		buffer[3U] |= 0x01U;
@@ -291,19 +314,23 @@ bool CMMDVMCal::writeConfig()
 	if (ret <= 0)
 		return false;
 
-	sleep(10U);
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
 
-	ret = readModem(buffer, 50U);
-	if (ret <= 0)
-		return false;
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stdout, "The MMDVM is not responding to the SET_CONFIG command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
 
-	if (buffer[2U] == 0x7FU) {
-		::fprintf(stderr, "Got a NAK from the modem" EOL);
-		return false;
-	}
-
-	if (buffer[2U] != 0x70U) {
-		CUtils::dump("Invalid response", buffer, ret);
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stdout, "Received a NAK to the SET_CONFIG command from the modem: %u" EOL, m_buffer[4U]);
 		return false;
 	}
 
@@ -339,7 +366,7 @@ bool CMMDVMCal::setPTTInvert()
 
 bool CMMDVMCal::setDMRDeviation()
 {
-	m_mode = 98;
+	m_mode = STATE_DMRCAL;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
@@ -348,7 +375,7 @@ bool CMMDVMCal::setDMRDeviation()
 
 bool CMMDVMCal::setLowFrequencyCal()
 {
-	m_mode = 95;
+	m_mode = STATE_LFCAL;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
@@ -357,7 +384,7 @@ bool CMMDVMCal::setLowFrequencyCal()
 
 bool CMMDVMCal::setDMRCal1K()
 {
-	m_mode = 94;
+	m_mode = STATE_DMRCAL1K;
 
 	::fprintf(stdout, "DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
@@ -366,7 +393,7 @@ bool CMMDVMCal::setDMRCal1K()
 
 bool CMMDVMCal::setDMRDMO1K()
 {
-	m_mode = 92;
+	m_mode = STATE_DMRDMO1K;
 
 	::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
@@ -375,7 +402,7 @@ bool CMMDVMCal::setDMRDMO1K()
 
 bool CMMDVMCal::setP25Cal1K()
 {
-	m_mode = 93;
+	m_mode = STATE_P25CAL1K;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
@@ -384,7 +411,7 @@ bool CMMDVMCal::setP25Cal1K()
 
 bool CMMDVMCal::setNXDNCal1K()
 {
-	m_mode = 91;
+	m_mode = STATE_NXDNCAL1K;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
@@ -393,7 +420,7 @@ bool CMMDVMCal::setNXDNCal1K()
 
 bool CMMDVMCal::setDSTAR()
 {
-	m_mode = 99;
+	m_mode = STATE_DSTARCAL;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
@@ -402,7 +429,7 @@ bool CMMDVMCal::setDSTAR()
 
 bool CMMDVMCal::setRSSI()
 {
-	m_mode = 96;
+	m_mode = STATE_RSSICAL;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
@@ -483,28 +510,32 @@ bool CMMDVMCal::setTransmit()
 
 	unsigned char buffer[50U];
 
-	buffer[0U] = 0xE0U;
+	buffer[0U] = MMDVM_FRAME_START;
 	buffer[1U] = 4U;
-	buffer[2U] = 0x08U;
+	buffer[2U] = MMDVM_CAL_DATA;
 	buffer[3U] = m_transmit ? 0x01U : 0x00U;
 
 	int ret = m_serial.write(buffer, 4U);
 	if (ret <= 0)
 		return false;
 
-	sleep(10U);
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
 
-	ret = readModem(buffer, 50U);
-	if (ret <= 0)
-		return false;
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stdout, "The MMDVM is not responding to the CAL_DATA command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
 
-	if (buffer[2U] == 0x7FU) {
-		::fprintf(stderr, "Got a NAK from the modem" EOL);
-		return false;
-	}
-
-	if (buffer[2U] != 0x70U) {
-		CUtils::dump("Invalid response", buffer, ret);
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stdout, "Received a NAK to the CAL_DATA command from the modem: %u" EOL, m_buffer[4U]);
 		return false;
 	}
 
@@ -550,41 +581,98 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 	}
 }
 
-int CMMDVMCal::readModem(unsigned char *buffer, unsigned int length)
+RESP_TYPE_MMDVM CMMDVMCal::getResponse()
 {
-	int n = m_serial.read(buffer + 0U, 1U);
-	if (n <= 0)
-		return n;
+	if (m_offset == 0U) {
+		// Get the start of the frame or nothing at all
+		int ret = m_serial.read(m_buffer + 0U, 1U);
+		if (ret < 0) {
+			::fprintf(stderr, "Error when reading from the modem" EOL);
+			return RTM_ERROR;
+		}
 
-	if (buffer[0U] != 0xE0U)
-		return 0;
+		if (ret == 0)
+			return RTM_TIMEOUT;
 
-	n = 0;
-	for (unsigned int i = 0U; i < 20U && n == 0; i++) {
-		n = m_serial.read(buffer + 1U, 1U);
-		if (n < 0)
-			return n;
-		if (n == 0)
-			sleep(10U);
+		if (m_buffer[0U] != MMDVM_FRAME_START)
+			return RTM_TIMEOUT;
+
+		m_offset = 1U;
 	}
 
-	if (n == 0)
-		return -1;
+	if (m_offset == 1U) {
+		// Get the length of the frame
+		int ret = m_serial.read(m_buffer + 1U, 1U);
+		if (ret < 0) {
+			::fprintf(stderr, "Error when reading from the modem" EOL);
+			m_offset = 0U;
+			return RTM_ERROR;
+		}
 
-	unsigned int len = buffer[1U];
+		if (ret == 0)
+			return RTM_TIMEOUT;
 
-	unsigned int offset = 2U;
-	for (unsigned int i = 0U; i < 20U && offset < len; i++) {
-		n = m_serial.read(buffer + offset, len - offset);
-		if (n < 0)
-			return n;
-		if (n == 0)
-			sleep(10U);
-		if (n > 0)
-			offset += n;
+		if (m_buffer[1U] >= 250U) {
+			::fprintf(stderr, "Invalid length received from the modem - %u" EOL, m_buffer[1U]);
+			m_offset = 0U;
+			return RTM_ERROR;
+		}
+
+		m_length = m_buffer[1U];
+		m_offset = 2U;
 	}
 
-	return len;
+	if (m_offset == 2U) {
+		// Get the frame type
+		int ret = m_serial.read(m_buffer + 2U, 1U);
+		if (ret < 0) {
+			::fprintf(stderr, "Error when reading from the modem" EOL);
+			m_offset = 0U;
+			return RTM_ERROR;
+		}
+
+		if (ret == 0)
+			return RTM_TIMEOUT;
+
+		m_offset = 3U;
+	}
+
+	if (m_offset >= 3U) {
+		// Use later two byte length field
+		if (m_length == 0U) {
+			int ret = m_serial.read(m_buffer + 3U, 2U);
+			if (ret < 0) {
+				::fprintf(stderr, "Error when reading from the modem" EOL);
+				m_offset = 0U;
+				return RTM_ERROR;
+			}
+
+			if (ret == 0)
+				return RTM_TIMEOUT;
+
+			m_length = (m_buffer[3U] << 8) | m_buffer[4U];
+			m_offset = 5U;
+		}
+
+		while (m_offset < m_length) {
+			int ret = m_serial.read(m_buffer + m_offset, m_length - m_offset);
+			if (ret < 0) {
+				::fprintf(stderr, "Error when reading from the modem" EOL);
+				m_offset = 0U;
+				return RTM_ERROR;
+			}
+
+			if (ret == 0)
+				return RTM_TIMEOUT;
+
+			if (ret > 0)
+				m_offset += ret;
+		}
+	}
+
+	m_offset = 0U;
+
+	return RTM_OK;
 }
 
 void CMMDVMCal::sleep(unsigned int ms)

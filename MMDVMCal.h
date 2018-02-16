@@ -22,6 +22,28 @@
 #include "SerialController.h"
 #include "Console.h"
 
+enum RESP_TYPE_MMDVM {
+	RTM_OK,
+	RTM_TIMEOUT,
+	RTM_ERROR
+};
+
+enum HW_TYPE {
+	HWT_MMDVM,
+	HWT_MMDVM_HS
+};
+
+enum MMDVM_STATE {
+  STATE_NXDNCAL1K = 91,
+  STATE_DMRDMO1K  = 92,
+  STATE_P25CAL1K  = 93,
+  STATE_DMRCAL1K  = 94,
+  STATE_LFCAL     = 95,
+  STATE_RSSICAL   = 96,
+  STATE_DMRCAL    = 98,
+  STATE_DSTARCAL  = 99
+};
+
 class CMMDVMCal {
 public:
 	CMMDVMCal(const std::string& port);
@@ -40,7 +62,11 @@ private:
 	bool              m_txInvert;
 	bool              m_rxInvert;
 	bool              m_pttInvert;
-	unsigned char     m_mode;
+	MMDVM_STATE       m_mode;
+	unsigned char*    m_buffer;
+	unsigned int      m_length;
+	unsigned int      m_offset;
+	HW_TYPE           m_hwType;
 
 	void displayHelp();
 	bool setTransmit();
@@ -61,10 +87,10 @@ private:
 	bool setRSSI();
 
 	bool initModem();
-	int  readModem(unsigned char* buffer, unsigned int length);
 	void displayModem(const unsigned char* buffer, unsigned int length);
 	bool writeConfig();
 	void sleep(unsigned int ms);
+	RESP_TYPE_MMDVM getResponse();
 };
 
 #endif
