@@ -19,6 +19,7 @@
 
 #include "SerialController.h"
 
+#include <cstdio>
 #include <cstring>
 #include <cassert>
 
