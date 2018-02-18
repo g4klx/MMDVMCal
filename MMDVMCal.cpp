@@ -312,12 +312,21 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'm':
 				setDMRDMO1K();
 				break;
+			case 'S':
+			case 's':
+				setRSSI();
+				break;
 			case -1:
 				break;
 			default:
 				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
 				break;
 		}
+
+		RESP_TYPE_MMDVM resp = getResponse();
+
+		if (resp == RTM_OK)
+			displayModem(m_buffer, m_length);
 
 		sleep(5U);
 	}
@@ -338,6 +347,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
 }
@@ -788,7 +798,7 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 		short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d %d" EOL, length - 11U, buffer + 3U, val1, val2, val3, val4);
-	} else {
+	} else if (m_hwType == HWT_MMDVM) {
 		CUtils::dump("Response", buffer, length);
 	}
 }
