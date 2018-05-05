@@ -17,6 +17,7 @@
  */
 
 #include "MMDVMCal.h"
+#include "Version.h"
 
 #include <cstdio>
 
@@ -176,7 +177,7 @@ void CMMDVMCal::loop_MMDVM()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20180223" EOL);
+				::fprintf(stdout, VERSION EOL);
 				break;
 			case 'D':
 				setDMRDeviation();
@@ -302,7 +303,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, "MMDVMCal 20180223" EOL);
+				::fprintf(stdout, VERSION EOL);
 				break;
 			case 'D':
 			case 'd':
