@@ -405,7 +405,7 @@ bool CMMDVMCal::writeConfig(float txlevel)
 	unsigned char buffer[50U];
 
 	buffer[0U] = MMDVM_FRAME_START;
-	buffer[1U] = 19U;
+	buffer[1U] = 20U;
 	buffer[2U] = MMDVM_SET_CONFIG;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -430,7 +430,7 @@ bool CMMDVMCal::writeConfig(float txlevel)
 	buffer[17U] = (unsigned char)(m_rxDCOffset + 128);
 	buffer[18U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 
-	int ret = m_serial.write(buffer, 19U);
+	int ret = m_serial.write(buffer, 20U);
 	if (ret <= 0)
 		return false;
 
