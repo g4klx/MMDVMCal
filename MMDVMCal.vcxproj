@@ -147,6 +147,7 @@
     <ClInclude Include="SerialController.h" />
     <ClInclude Include="SerialPort.h" />
     <ClInclude Include="Utils.h" />
+    <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Console.cpp" />
