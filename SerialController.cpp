@@ -34,7 +34,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
+#if !defined(__APPLE__)
 #include <linux/i2c-dev.h>
+#endif
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -245,6 +247,7 @@ bool CSerialController::open()
 	assert(m_fd == -1);
 
 	if (m_device == "/dev/i2c-1") {
+#if !defined(__APPLE__)
 		m_fd = ::open(m_device.c_str(), O_RDWR);
 		if (m_fd < 0) {
 			::fprintf(stderr, "Cannot open device - %s", m_device.c_str());
@@ -262,7 +265,8 @@ bool CSerialController::open()
 			::close(m_fd);
 			return false;
 		}
-    } else {
+#endif
+	} else {
 #if defined(__APPLE__)
 		m_fd = ::open(m_device.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK); /*open in block mode under OSX*/
 #else
@@ -294,12 +298,12 @@ bool CSerialController::open()
 		termios.c_cflag &= ~CSTOPB;     /* only need 1 stop bit */
 		termios.c_cflag &= ~CRTSCTS;    /* no hardware flowcontrol */
 
-	    /* setup for non-canonical mode */
+		/* setup for non-canonical mode */
 		termios.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
 		termios.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
 		termios.c_oflag &= ~OPOST;
 
-	    /* fetch bytes as they become available */
+		/* fetch bytes as they become available */
 		termios.c_cc[VMIN] = 1;
 		termios.c_cc[VTIME] = 1;
 #else
@@ -408,6 +412,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 
 	while (offset < length) {
 		if (m_device == "/dev/i2c-1"){
+#if !defined(__APPLE__)
 			ssize_t c = ::read(m_fd, buffer + offset, 1U);
 			if (c < 0) {
 				if (errno != EAGAIN) {
@@ -417,6 +422,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 			}
 			if (c > 0)
 				offset += c;
+#endif
 		} else {
 
 		fd_set fds;
@@ -452,7 +458,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 				offset += len;
 		}
 	}
-    }
+	}
 	return length;
 }
 
@@ -488,11 +494,13 @@ int CSerialController::write(const unsigned char* buffer, unsigned int length)
 	while (ptr < length) {
 		ssize_t n = 0U;
 		if (m_device == "/dev/i2c-1"){
-            n = ::write(m_fd, buffer + ptr, 1U);
-        } else {
+#if !defined(__APPLE__)
+			n = ::write(m_fd, buffer + ptr, 1U);
+#endif
+		} else {
 		if (canWrite())
 			n = ::write(m_fd, buffer + ptr, length - ptr);
-        }
+		}
 		if (n < 0) {
 			if (errno != EAGAIN) {
 				::fprintf(stderr, "Error returned from write(), errno=%d" EOL, errno);
