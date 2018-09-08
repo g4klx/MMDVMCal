@@ -208,6 +208,7 @@ void CMMDVMCal::loop_MMDVM()
 				setRSSI();
 				break;
 			case -1:
+			case  0:
 				break;
 			default:
 				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
@@ -318,6 +319,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 				setRSSI();
 				break;
 			case -1:
+			case  0:
 				break;
 			default:
 				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
@@ -763,6 +765,11 @@ bool CMMDVMCal::setTransmit()
 		::fprintf(stdout, "Received a NAK to the CAL_DATA command from the modem: %u" EOL, m_buffer[4U]);
 		return false;
 	}
+
+	if (m_transmit)
+		::fprintf(stdout, "Set transmitter ON" EOL);
+	else
+		::fprintf(stdout, "Set transmitter OFF" EOL);
 
 	return true;
 }
