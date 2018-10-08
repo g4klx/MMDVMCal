@@ -1,7 +1,9 @@
-This is the calibration program to be used with the MMDVM. It is started by  
+This is the calibration program to be used with the MMDVM and MMDVM_HS. It is started by  
 adding the serial port onto the command line. On Windows the serial port must be  
 prefixed with \\.\ as in \\.\COM4 to be valid. Once started the program takes  
 the following commands:  
+
+- MMDVM:
 
 <table>
 <tr><th>Command</th><th>Description</th></tr>
@@ -29,3 +31,23 @@ the following commands:
 <tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
 </table>
 
+- MMDVM_HS:
+
+<table>
+<tr><th>Command</th><th>Description</th></tr>
+<tr><td>H/h</td><td>Display help</td></tr>
+<tr><td>Q/q</td><td>Quit</td></tr>
+<tr><td>E/e</td><td>Enter frequency</td><tr>
+<tr><td>F</td><td>Increase frequency</td></tr>
+<tr><td>f</td><td>Decrease frequency</td></tr>
+<tr><td>T</td><td>Increase deviation</td></tr>
+<tr><td>t</td><td>Decrease deviation</td></tr>
+<tr><td>P</td><td>Increase RF power</td></tr>
+<tr><td>p</td><td>Decrease RF power</td></tr>
+<tr><td>C/c</td><td>Carrier Only Mode</td></tr>
+<tr><td>D/d</td><td>DMR Deviation Mode</td></tr>
+<tr><td>M/m</td><td>DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
+<tr><td>S/s</td><td>RSSI Mode</td></tr>
+<tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
+<tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
+</table>
