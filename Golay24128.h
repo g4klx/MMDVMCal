@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2018 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2010,2016 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,9 +16,17 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#if !defined(VERSION_H)
-#define	VERSION_H
+#ifndef Golay24128_H
+#define Golay24128_H
 
-#define VERSION "MMDVMCal 20181015"
+class CGolay24128 {
+public:
+	static unsigned int encode23127(unsigned int data);
+	static unsigned int encode24128(unsigned int data);
+
+	static unsigned int decode23127(unsigned int code);
+	static unsigned int decode24128(unsigned int code);
+	static unsigned int decode24128(unsigned char* bytes);
+};
 
 #endif

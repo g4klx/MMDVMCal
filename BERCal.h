@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2018 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -16,9 +16,19 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#if !defined(VERSION_H)
-#define	VERSION_H
+#if !defined(BERCAL_H)
+#define BERCAL_H
 
-#define VERSION "MMDVMCal 20181015"
+class CBERCal {
+public:
+	CBERCal();
+	~CBERCal();
+
+	void DMRFEC(const unsigned char *buffer);
+
+private:
+	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
+
+};
 
 #endif

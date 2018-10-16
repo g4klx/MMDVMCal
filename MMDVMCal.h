@@ -1,5 +1,6 @@
 /*
  *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 
 #include "SerialController.h"
 #include "Console.h"
+#include "BERCal.h"
 
 #include <cstring>
 #include <cstdlib>
@@ -37,6 +39,7 @@ enum HW_TYPE {
 };
 
 enum MMDVM_STATE {
+  STATE_DMR       = 2,
   STATE_NXDNCAL1K = 91,
   STATE_DMRDMO1K  = 92,
   STATE_P25CAL1K  = 93,
@@ -57,6 +60,7 @@ public:
 private:
 	CSerialController m_serial;
 	CConsole          m_console;
+	CBERCal           m_ber;
 	bool              m_transmit;
 	bool              m_carrier;
 	float             m_txLevel;
@@ -70,10 +74,12 @@ private:
 	unsigned int      m_startfrequency;
 	float             m_power;
 	MMDVM_STATE       m_mode;
+	bool              m_duplex;
 	unsigned char*    m_buffer;
 	unsigned int      m_length;
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
+	bool              m_dmrEnabled;
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
@@ -97,6 +103,7 @@ private:
 	bool setDMRDMO1K();
 	bool setP25Cal1K();
 	bool setNXDNCal1K();
+	bool setDMRBER();
 	bool setDSTAR();
 	bool setRSSI();
 

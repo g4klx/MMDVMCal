@@ -142,7 +142,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BERCal.h" />
     <ClInclude Include="Console.h" />
+    <ClInclude Include="Golay24128.h" />
     <ClInclude Include="MMDVMCal.h" />
     <ClInclude Include="SerialController.h" />
     <ClInclude Include="SerialPort.h" />
@@ -150,7 +152,9 @@
     <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BERCal.cpp" />
     <ClCompile Include="Console.cpp" />
+    <ClCompile Include="Golay24128.cpp" />
     <ClCompile Include="MMDVMCal.cpp" />
     <ClCompile Include="SerialController.cpp" />
     <ClCompile Include="SerialPort.cpp" />

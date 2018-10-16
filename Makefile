@@ -5,8 +5,14 @@ CXX = g++
 
 CXXFLAGS = -O2 -Wall
 
-MMDVMCal:	MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o
-		$(LD) $(LDFLAGS) -o MMDVMCal MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o $(LIBS)
+MMDVMCal:	BERCal.o Golay24128.o MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o
+		$(LD) $(LDFLAGS) -o MMDVMCal BERCal.o Golay24128.o MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o $(LIBS)
+
+BERCal.o:	BERCal.cpp BERCal.h Golay24128.h Utils.h
+		$(CXX) $(CXXFLAGS) -c BERCal.cpp
+
+Golay24128.o:	Golay24128.cpp Golay24128.h
+		$(CXX) $(CXXFLAGS) -c Golay24128.cpp
 
 MMDVMCal.o:	MMDVMCal.cpp MMDVMCal.h SerialController.h Console.h Utils.h
 		$(CXX) $(CXXFLAGS) -c MMDVMCal.cpp

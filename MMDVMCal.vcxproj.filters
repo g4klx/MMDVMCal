@@ -11,7 +11,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BERCal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Golay24128.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMDVMCal.h">
@@ -31,7 +37,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BERCal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Console.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Golay24128.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MMDVMCal.cpp">

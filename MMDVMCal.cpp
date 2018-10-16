@@ -1,5 +1,6 @@
 /*
  *   Copyright (C) 2015,2016,2017,2018 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -70,9 +71,11 @@ m_frequency(433000000U),
 m_startfrequency(433000000U),
 m_power(100.0F),
 m_mode(STATE_DSTARCAL),
+m_duplex(true),
 m_buffer(NULL),
 m_length(0U),
-m_offset(0U)
+m_offset(0U),
+m_dmrEnabled(false)
 {
 	m_buffer = new unsigned char[BUFFER_LENGTH];
 }
@@ -196,6 +199,10 @@ void CMMDVMCal::loop_MMDVM()
 			case 'm':
 				setDMRDMO1K();
 				break;
+			case 'B':
+			case 'b':
+				setDMRBER();
+				break;
 			case 'a':
 				setP25Cal1K();
 				break;
@@ -244,6 +251,7 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    L/l      DMR Low Frequency Mode (80 Hz square wave)" EOL);
 	::fprintf(stdout, "    A        DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    B/b      DMR MS FEC BER Test Mode" EOL);
 	::fprintf(stdout, "    a        P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 	::fprintf(stdout, "    N/n      NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
@@ -314,6 +322,10 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'm':
 				setDMRDMO1K();
 				break;
+			case 'B':
+			case 'b':
+				setDMRBER();
+				break;
 			case 'S':
 			case 's':
 				setRSSI();
@@ -350,6 +362,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    B/b      DMR MS FEC BER Test Mode" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
@@ -416,7 +429,11 @@ bool CMMDVMCal::writeConfig(float txlevel)
 		buffer[3U] |= 0x02U;
 	if (m_pttInvert)
 		buffer[3U] |= 0x04U;
+	if (!m_duplex)
+		buffer[3U] |= 0x80U;
 	buffer[4U] = 0x00U;
+	if (m_dmrEnabled)
+		buffer[4U] |= 0x02U;
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
 	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
@@ -492,6 +509,8 @@ bool CMMDVMCal::setDMRDeviation()
 {
 	m_mode = STATE_DMRCAL;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
@@ -502,6 +521,8 @@ bool CMMDVMCal::setLowFrequencyCal()
 {
 	m_mode = STATE_LFCAL;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
@@ -512,6 +533,8 @@ bool CMMDVMCal::setDMRCal1K()
 {
 	m_mode = STATE_DMRCAL1K;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
@@ -527,6 +550,8 @@ bool CMMDVMCal::setDMRDMO1K()
 	else {
 		m_mode = STATE_DMRDMO1K;
 		m_carrier = false;
+		m_duplex = true;
+		m_dmrEnabled = false;
 
 		::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
@@ -538,6 +563,8 @@ bool CMMDVMCal::setP25Cal1K()
 {
 	m_mode = STATE_P25CAL1K;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
@@ -548,8 +575,22 @@ bool CMMDVMCal::setNXDNCal1K()
 {
 	m_mode = STATE_NXDNCAL1K;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
+
+	return writeConfig(m_txLevel);
+}
+
+bool CMMDVMCal::setDMRBER()
+{
+	m_mode = STATE_DMR;
+	m_carrier = false;
+	m_duplex = false;
+	m_dmrEnabled = true;
+
+	::fprintf(stdout, "DMR FEC BER Test Mode" EOL);
 
 	return writeConfig(m_txLevel);
 }
@@ -558,6 +599,8 @@ bool CMMDVMCal::setDSTAR()
 {
 	m_mode = STATE_DSTARCAL;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
@@ -568,6 +611,8 @@ bool CMMDVMCal::setRSSI()
 {
 	m_mode = STATE_RSSICAL;
 	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
@@ -578,6 +623,8 @@ bool CMMDVMCal::setCarrier()
 {
 	m_mode = STATE_DMRCAL;
 	m_carrier = true;
+	m_duplex = true;
+	m_dmrEnabled = false;
 
 	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
 
@@ -808,7 +855,10 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 		short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d %d" EOL, length - 11U, buffer + 3U, val1, val2, val3, val4);
-	} else if (m_hwType == HWT_MMDVM) {
+	} else if (buffer[2U] == 0x18U || buffer[2U] == 0x1AU) {
+		//CUtils::dump("DMR data", buffer, length);
+		m_ber.DMRFEC(buffer + 4U);
+	} else if (m_hwType == HWT_MMDVM && m_mode != STATE_DMR) {
 		CUtils::dump("Response", buffer, length);
 	}
 }
