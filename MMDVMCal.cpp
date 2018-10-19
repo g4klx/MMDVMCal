@@ -249,9 +249,9 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
 	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    L/l      DMR Low Frequency Mode (80 Hz square wave)" EOL);
-	::fprintf(stdout, "    A        DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
-	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
-	::fprintf(stdout, "    B/b      DMR MS FEC BER Test Mode" EOL);
+	::fprintf(stdout, "    A        DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    B/b      BER Test Mode (FEC) for DMR Simplex (CC1)" EOL);
 	::fprintf(stdout, "    a        P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 	::fprintf(stdout, "    N/n      NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
@@ -361,8 +361,8 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    p        Decrease RF power" EOL);
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
-	::fprintf(stdout, "    M/m      DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
-	::fprintf(stdout, "    B/b      DMR MS FEC BER Test Mode" EOL);
+	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    B/b      BER Test Mode (FEC) for DMR Simplex (CC1)" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
@@ -438,7 +438,7 @@ bool CMMDVMCal::writeConfig(float txlevel)
 	buffer[6U] = m_mode;
 	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
 	buffer[8U] = (unsigned char)(txlevel * 2.55F + 0.5F);
-	buffer[9U] = 0U;
+	buffer[9U] = 1U;
 	buffer[10U] = 0U;
 	buffer[11U] = 128U;
 	buffer[12U] = (unsigned char)(txlevel * 2.55F + 0.5F);
@@ -536,7 +536,7 @@ bool CMMDVMCal::setDMRCal1K()
 	m_duplex = true;
 	m_dmrEnabled = false;
 
-	::fprintf(stdout, "DMR BS 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
 	return writeConfig(m_txLevel);
 }
@@ -553,7 +553,7 @@ bool CMMDVMCal::setDMRDMO1K()
 		m_duplex = true;
 		m_dmrEnabled = false;
 
-		::fprintf(stdout, "DMR MS 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+		::fprintf(stdout, "DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
 		return writeConfig(m_txLevel);
 	}
@@ -590,7 +590,7 @@ bool CMMDVMCal::setDMRBER()
 	m_duplex = false;
 	m_dmrEnabled = true;
 
-	::fprintf(stdout, "DMR FEC BER Test Mode" EOL);
+	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
 	return writeConfig(m_txLevel);
 }
@@ -856,8 +856,7 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 		short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d %d" EOL, length - 11U, buffer + 3U, val1, val2, val3, val4);
 	} else if (buffer[2U] == 0x18U || buffer[2U] == 0x1AU) {
-		//CUtils::dump("DMR data", buffer, length);
-		m_ber.DMRFEC(buffer + 4U);
+		m_ber.DMRFEC(buffer + 4U, buffer[3]);
 	} else if (m_hwType == HWT_MMDVM && m_mode != STATE_DMR) {
 		CUtils::dump("Response", buffer, length);
 	}

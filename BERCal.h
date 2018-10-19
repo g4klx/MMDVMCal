@@ -24,7 +24,7 @@ public:
 	CBERCal();
 	~CBERCal();
 
-	void DMRFEC(const unsigned char *buffer);
+	void DMRFEC(const unsigned char *buffer, const unsigned char m_seq);
 
 private:
 	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);

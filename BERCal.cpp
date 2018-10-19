@@ -455,15 +455,19 @@ const unsigned int PRNG_TABLE[] = {
 
 CBERCal::CBERCal()
 {
-
 }
 
 CBERCal::~CBERCal()
 {
 }
 
-void CBERCal::DMRFEC(const unsigned char *buffer)
+void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq)
 {
+	unsigned char m_type = m_seq & 0xF0U;
+
+	if (m_type == 0x40U)
+		return;
+
 	unsigned int a1 = 0U, a2 = 0U, a3 = 0U;
 	unsigned int MASK = 0x800000U;
 	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
@@ -519,7 +523,10 @@ void CBERCal::DMRFEC(const unsigned char *buffer)
 	errors += regenerateDMR(a2, b2, c2);
 	errors += regenerateDMR(a3, b3, c3);
 
-	::fprintf(stdout, "DMR audio FEC BER (errs): %.3f%% (%u/141)" EOL, float(errors) / 1.41F, errors);
+	float dmr_ber = float(errors) / 1.41F;
+
+	if (dmr_ber < 10.0F)
+		::fprintf(stdout, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)" EOL, m_seq & 0x0FU, dmr_ber, errors);
 }
 
 unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c)
