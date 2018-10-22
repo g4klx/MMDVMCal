@@ -27,6 +27,10 @@ public:
 	void DMRFEC(const unsigned char *buffer, const unsigned char m_seq);
 
 private:
+	unsigned int m_errors;
+	unsigned int m_bits;
+	unsigned int m_frames;
+
 	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
 
 };

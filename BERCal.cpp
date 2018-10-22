@@ -453,7 +453,10 @@ const unsigned int PRNG_TABLE[] = {
 	0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U};
 
 
-CBERCal::CBERCal()
+CBERCal::CBERCal():
+m_errors(0U),
+m_bits(0U),
+m_frames(0U)
 {
 }
 
@@ -463,10 +466,19 @@ CBERCal::~CBERCal()
 
 void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq)
 {
-	unsigned char m_type = m_seq & 0xF0U;
-
-	if (m_type == 0x40U)
+	if (m_seq == 65U) {
+		::fprintf(stdout, "DMR voice header received" EOL);
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
 		return;
+	} else if (m_seq == 66U) {
+		::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	}
 
 	unsigned int a1 = 0U, a2 = 0U, a3 = 0U;
 	unsigned int MASK = 0x800000U;
@@ -524,6 +536,10 @@ void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq)
 	errors += regenerateDMR(a3, b3, c3);
 
 	float dmr_ber = float(errors) / 1.41F;
+
+	m_errors += errors;
+	m_bits += 141;
+	m_frames++;
 
 	if (dmr_ber < 10.0F)
 		::fprintf(stdout, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)" EOL, m_seq & 0x0FU, dmr_ber, errors);

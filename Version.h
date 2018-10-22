@@ -19,6 +19,6 @@
 #if !defined(VERSION_H)
 #define	VERSION_H
 
-#define VERSION "MMDVMCal 20181015"
+#define VERSION "MMDVMCal 20181021"
 
 #endif
