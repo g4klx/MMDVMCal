@@ -25,6 +25,7 @@
 #include "Utils.h"
 
 #include <cstdio>
+#include <cassert>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define EOL	"\n"
