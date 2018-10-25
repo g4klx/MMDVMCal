@@ -1,6 +1,5 @@
 /*
- *   Copyright (C) 2018 by Andy Uribe CA6JAU
- *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
+ *   Copyright (C) 2015,2016 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -17,26 +16,28 @@
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#if !defined(BERCAL_H)
-#define BERCAL_H
+#ifndef	Hamming_H
+#define	Hamming_H
 
-class CBERCal {
+class CHamming {
 public:
-	CBERCal();
-	~CBERCal();
+	static void encode15113_1(bool* d);
+	static bool decode15113_1(bool* d);
 
-	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq);
-	void IMBEFEC(const unsigned char* buffer);
+	static void encode15113_2(bool* d);
+	static bool decode15113_2(bool* d);
 
-private:
-	unsigned int m_errors;
-	unsigned int m_bits;
-	unsigned int m_frames;
+	static void encode1393(bool* d);
+	static bool decode1393(bool* d);
 
-	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
+	static void encode1063(bool* d);
+	static bool decode1063(bool* d);
 
-	unsigned int regenerateIMBE(const unsigned char* bytes);
+	static void encode16114(bool* d);
+	static bool decode16114(bool* d);
 
+	static void encode17123(bool* d);
+	static bool decode17123(bool* d);
 };
 
 #endif

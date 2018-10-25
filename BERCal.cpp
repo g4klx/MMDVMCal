@@ -1,6 +1,7 @@
 /*
  *   Copyright (C) 2010,2014,2016,2018 by Jonathan Naylor G4KLX
  *   Copyright (C) 2018 by Andy Uribe CA6JAU
+ *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -18,10 +19,13 @@
  */
 
 #include "BERCal.h"
+#include "Hamming.h"
 #include "Golay24128.h"
+#include "P25Utils.h"
 #include "Utils.h"
 
 #include <cstdio>
+#include <cassert>
 
 #if defined(_WIN32) || defined(_WIN64)
 #define EOL	"\n"
@@ -452,6 +456,14 @@ const unsigned int PRNG_TABLE[] = {
 	0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U, 
 	0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U};
 
+const unsigned int IMBE_INTERLEAVE[] = {
+	0,  7, 12, 19, 24, 31, 36, 43, 48, 55, 60, 67, 72, 79, 84, 91,  96, 103, 108, 115, 120, 127, 132, 139,
+	1,  6, 13, 18, 25, 30, 37, 42, 49, 54, 61, 66, 73, 78, 85, 90,  97, 102, 109, 114, 121, 126, 133, 138,
+	2,  9, 14, 21, 26, 33, 38, 45, 50, 57, 62, 69, 74, 81, 86, 93,  98, 105, 110, 117, 122, 129, 134, 141,
+	3,  8, 15, 20, 27, 32, 39, 44, 51, 56, 63, 68, 75, 80, 87, 92,  99, 104, 111, 116, 123, 128, 135, 140,
+	4, 11, 16, 23, 28, 35, 40, 47, 52, 59, 64, 71, 76, 83, 88, 95, 100, 107, 112, 119, 124, 131, 136, 143,
+	5, 10, 17, 22, 29, 34, 41, 46, 53, 58, 65, 70, 77, 82, 89, 94, 101, 106, 113, 118, 125, 130, 137, 142 };
+
 
 CBERCal::CBERCal():
 m_errors(0U),
@@ -464,7 +476,7 @@ CBERCal::~CBERCal()
 {
 }
 
-void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq)
+void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 {
 	if (m_seq == 65U) {
 		::fprintf(stdout, "DMR voice header received" EOL);
@@ -545,6 +557,103 @@ void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq)
 		::fprintf(stdout, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)" EOL, m_seq & 0x0FU, dmr_ber, errors);
 }
 
+void CBERCal::IMBEFEC(const unsigned char* buffer)
+{
+	unsigned char nid[8U];
+	CP25Utils::decode(buffer + 1U, nid, 48U, 114U);
+	unsigned char duid = nid[1U] & 0x0FU;
+
+	unsigned int errs = 0U;
+	unsigned char imbe[18U];
+
+	if (duid == 0x00U) {
+		::fprintf(stdout, "P25 HDU received");
+		m_bits = 0U;
+		m_errors = 0U;
+		m_frames = 0U;
+		return;
+	}
+	else if (duid == 0x03U) {
+		::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%", m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		m_bits = 0U;
+		m_errors = 0U;
+		m_frames = 0U;
+		return;
+	}
+	else if (duid == 0x05U) {
+		CP25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+		errs += regenerateIMBE(imbe);
+
+		float ber = float(errs) / 12.33F;
+		if (ber < 10.0F)
+			::fprintf(stdout, "P25 LDU1 audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+
+		m_bits += 1233U;
+		m_errors += errs;
+		m_frames++;
+	}
+	else if (duid == 0x0AU) {
+		CP25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+		errs += regenerateIMBE(imbe);
+
+		CP25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+		errs += regenerateIMBE(imbe);
+
+		float ber = float(errs) / 12.33F;
+		if (ber < 10.0F)
+			::fprintf(stdout, "P25 LDU2 audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+
+		m_bits += 1233U;
+		m_errors += errs;
+		m_frames++;
+	}
+}
+
 unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c)
 {
 	unsigned int orig_a = a;
@@ -586,4 +695,132 @@ unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned i
 	}
 
 	return errsA + errsB;
+}
+
+unsigned int CBERCal::regenerateIMBE(const unsigned char* bytes)
+{
+	assert(bytes != NULL);
+
+	bool orig[144U];
+	bool temp[144U];
+
+	// De-interleave
+	for (unsigned int i = 0U; i < 144U; i++) {
+		unsigned int n = IMBE_INTERLEAVE[i];
+		orig[i] = temp[i] = READ_BIT(bytes, n);
+	}
+
+	// now ..
+
+	// 12 voice bits     0
+	// 11 golay bits     12
+	//
+	// 12 voice bits     23
+	// 11 golay bits     35
+	//
+	// 12 voice bits     46
+	// 11 golay bits     58
+	//
+	// 12 voice bits     69
+	// 11 golay bits     81
+	//
+	// 11 voice bits     92
+	//  4 hamming bits   103
+	//
+	// 11 voice bits     107
+	//  4 hamming bits   118
+	//
+	// 11 voice bits     122
+	//  4 hamming bits   133
+	//
+	//  7 voice bits     137
+
+	// Process the c0 section first to allow the de-whitening to be accurate
+
+	// Check/Fix FEC
+	bool* bit = temp;
+
+	// c0
+	unsigned int g1 = 0U;
+	for (unsigned int i = 0U; i < 23U; i++)
+		g1 = (g1 << 1) | (bit[i] ? 0x01U : 0x00U);
+	unsigned int c0data = CGolay24128::decode23127(g1);
+	unsigned int g2 = CGolay24128::encode23127(c0data);
+	for (int i = 23; i >= 0; i--) {
+		bit[i] = (g2 & 0x01U) == 0x01U;
+		g2 >>= 1;
+	}
+	bit += 23U;
+
+	bool prn[114U];
+
+	// Create the whitening vector and save it for future use
+	unsigned int p = 16U * c0data;
+	for (unsigned int i = 0U; i < 114U; i++) {
+		p = (173U * p + 13849U) % 65536U;
+		prn[i] = p >= 32768U;
+	}
+
+	// De-whiten some bits
+	for (unsigned int i = 0U; i < 114U; i++)
+		temp[i + 23U] ^= prn[i];
+
+	// c1
+	g1 = 0U;
+	for (unsigned int i = 0U; i < 23U; i++)
+		g1 = (g1 << 1) | (bit[i] ? 0x01U : 0x00U);
+	unsigned int c1data = CGolay24128::decode23127(g1);
+	g2 = CGolay24128::encode23127(c1data);
+	for (int i = 23; i >= 0; i--) {
+		bit[i] = (g2 & 0x01U) == 0x01U;
+		g2 >>= 1;
+	}
+	bit += 23U;
+
+	// c2
+	g1 = 0;
+	for (unsigned int i = 0U; i < 23U; i++)
+		g1 = (g1 << 1) | (bit[i] ? 0x01U : 0x00U);
+	unsigned int c2data = CGolay24128::decode23127(g1);
+	g2 = CGolay24128::encode23127(c2data);
+	for (int i = 23; i >= 0; i--) {
+		bit[i] = (g2 & 0x01U) == 0x01U;
+		g2 >>= 1;
+	}
+	bit += 23U;
+
+	// c3
+	g1 = 0U;
+	for (unsigned int i = 0U; i < 23U; i++)
+		g1 = (g1 << 1) | (bit[i] ? 0x01U : 0x00U);
+	unsigned int c3data = CGolay24128::decode23127(g1);
+	g2 = CGolay24128::encode23127(c3data);
+	for (int i = 23; i >= 0; i--) {
+		bit[i] = (g2 & 0x01U) == 0x01U;
+		g2 >>= 1;
+	}
+	bit += 23U;
+
+	// c4
+	CHamming::decode15113_1(bit);
+	bit += 15U;
+
+	// c5
+	CHamming::decode15113_1(bit);
+	bit += 15U;
+
+	// c6
+	CHamming::decode15113_1(bit);
+
+	// Whiten some bits
+	for (unsigned int i = 0U; i < 114U; i++)
+		temp[i + 23U] ^= prn[i];
+
+	unsigned int errors = 0U;
+	for (unsigned int i = 0U; i < 144U; i++) {
+		if (orig[i] != temp[i])
+			errors++;
+	}
+
+	return errors;
 }
