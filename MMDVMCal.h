@@ -82,6 +82,7 @@ private:
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
 	bool              m_dmrEnabled;
+	bool              m_dmrBERFEC;
 	bool              m_p25Enabled;
 
 	void displayHelp_MMDVM();
@@ -106,8 +107,9 @@ private:
 	bool setDMRDMO1K();
 	bool setP25Cal1K();
 	bool setNXDNCal1K();
-	bool setDMRBER();
-	bool setP25BER();
+	bool setDMRBER_FEC();
+	bool setDMRBER_1K();
+	bool setP25BER_FEC();
 	bool setDSTAR();
 	bool setRSSI();
 

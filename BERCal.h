@@ -26,6 +26,7 @@ public:
 	~CBERCal();
 
 	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq);
+	void DMR1K(const unsigned char *buffer, const unsigned char m_seq);
 	void IMBEFEC(const unsigned char* buffer);
 
 private:
