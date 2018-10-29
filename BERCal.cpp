@@ -567,14 +567,14 @@ void CBERCal::IMBEFEC(const unsigned char* buffer)
 	unsigned char imbe[18U];
 
 	if (duid == 0x00U) {
-		::fprintf(stdout, "P25 HDU received");
+		::fprintf(stdout, "P25 HDU received" EOL);
 		m_bits = 0U;
 		m_errors = 0U;
 		m_frames = 0U;
 		return;
 	}
 	else if (duid == 0x03U) {
-		::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%", m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
 		m_bits = 0U;
 		m_errors = 0U;
 		m_frames = 0U;
@@ -610,7 +610,7 @@ void CBERCal::IMBEFEC(const unsigned char* buffer)
 
 		float ber = float(errs) / 12.33F;
 		if (ber < 10.0F)
-			::fprintf(stdout, "P25 LDU1 audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+			::fprintf(stdout, "P25 LDU1 audio FEC BER (errs): %.3f%% (%u/1233)" EOL, ber, errs);
 
 		m_bits += 1233U;
 		m_errors += errs;
@@ -646,7 +646,7 @@ void CBERCal::IMBEFEC(const unsigned char* buffer)
 
 		float ber = float(errs) / 12.33F;
 		if (ber < 10.0F)
-			::fprintf(stdout, "P25 LDU2 audio FEC BER (errs): %.3f%% (%u/1233)", ber, errs);
+			::fprintf(stdout, "P25 LDU2 audio FEC BER (errs): %.3f%% (%u/1233)" EOL, ber, errs);
 
 		m_bits += 1233U;
 		m_errors += errs;

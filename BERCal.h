@@ -34,7 +34,6 @@ private:
 	unsigned int m_frames;
 
 	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
-
 	unsigned int regenerateIMBE(const unsigned char* bytes);
 
 };
