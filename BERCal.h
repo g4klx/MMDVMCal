@@ -37,6 +37,7 @@ private:
 	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
 	unsigned int regenerateIMBE(const unsigned char* bytes);
 
+	unsigned char countErrs(unsigned char a, unsigned char b);
 };
 
 #endif

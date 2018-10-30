@@ -25,6 +25,7 @@ the following commands:
 <tr><td>A</td><td>DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)</td></tr>
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
 <tr><td>B</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
+<tr><td>J/j</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
 <tr><td>b</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>a</td><td>P25 1011 Hz Test Pattern (NAC293 ID1 TG1)</td></tr>
 <tr><td>d</td><td>D-Star mode</td></tr>
@@ -50,6 +51,7 @@ the following commands:
 <tr><td>D/d</td><td>DMR Deviation Mode</td></tr>
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
 <tr><td>B</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
+<tr><td>J/j</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
 <tr><td>b</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>

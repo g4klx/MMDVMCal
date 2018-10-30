@@ -591,22 +591,36 @@ void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 
 void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 {
+	unsigned int errors = 0;
+	unsigned char dmr_seq = m_seq & 0x0FU;
+
 	if (m_seq == 65U) {
-		::fprintf(stdout, "DMR voice header received" EOL);
-		m_errors = 0U;
-		m_bits = 0U;
-		m_frames = 0U;
+		for (unsigned int i = 0U; i < 33U; i++)
+			errors += countErrs(buffer[i], VH_DMO1K[i]);
+		
+		m_errors += errors;
+		m_bits += 264;
+		m_frames++;
+
+		::fprintf(stdout, "DMR voice header received, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)" EOL, float(errors) / 2.64F, errors);
 		return;
 	} else if (m_seq == 66U) {
+		for (unsigned int i = 0U; i < 33U; i++)
+			errors += countErrs(buffer[i], VT_DMO1K[i]);
+		
+		m_errors += errors;
+		m_bits += 264;
+		m_frames++;
+
 		::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
-		m_errors = 0U;
-		m_bits = 0U;
-		m_frames = 0U;
 		return;
 	}
 
-	unsigned int errors = 0;
-	// Things to do...
+	if (dmr_seq > 5U)
+		dmr_seq = 5U;
+
+	for (unsigned int i = 0U; i < 33U; i++)
+		errors += countErrs(buffer[i], VOICE_1K[dmr_seq][i]);
 
 	float dmr_ber = float(errors) / 2.64F;
 
@@ -615,7 +629,7 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 	m_frames++;
 
 	if (dmr_ber < 10.0F)
-		::fprintf(stdout, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)" EOL, m_seq & 0x0FU, dmr_ber, errors);
+		::fprintf(stdout, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)" EOL, dmr_seq, dmr_ber, errors);
 }
 
 void CBERCal::IMBEFEC(const unsigned char* buffer)
@@ -884,4 +898,18 @@ unsigned int CBERCal::regenerateIMBE(const unsigned char* bytes)
 	}
 
 	return errors;
+}
+
+unsigned char CBERCal::countErrs(unsigned char a, unsigned char b)
+{
+	int cnt = 0;
+	unsigned char tmp = a ^ b;
+
+	while (tmp) {
+		if (tmp % 2 == 1)
+			cnt++;
+		tmp /= 2;
+	}
+
+	return cnt;
 }
