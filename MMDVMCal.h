@@ -49,7 +49,8 @@ enum MMDVM_STATE {
   STATE_LFCAL     = 95,
   STATE_RSSICAL   = 96,
   STATE_DMRCAL    = 98,
-  STATE_DSTARCAL  = 99
+  STATE_DSTARCAL  = 99,
+  STATE_INTCAL    = 100
 };
 
 class CMMDVMCal {
@@ -114,10 +115,11 @@ private:
 	bool setP25BER_FEC();
 	bool setDSTAR();
 	bool setRSSI();
+	bool setIntCal();
 
 	bool initModem();
 	void displayModem(const unsigned char* buffer, unsigned int length);
-	bool writeConfig(float txlevel);
+	bool writeConfig(float txlevel, bool debug);
 	void sleep(unsigned int ms);
 	bool setFrequency();
 	RESP_TYPE_MMDVM getResponse();

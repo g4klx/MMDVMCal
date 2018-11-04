@@ -282,7 +282,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 	m_mode = STATE_DMRCAL;
 	
 	setFrequency();
-	writeConfig(m_txLevel);
+	writeConfig(m_txLevel, m_debug);
 
 	displayHelp_MMDVM_HS();
 
@@ -357,6 +357,10 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 's':
 				setRSSI();
 				break;
+			case 'I':
+			case 'i':
+				setIntCal();
+				break;
 			case -1:
 			case  0:
 				break;
@@ -394,6 +398,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    J/j      BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    b        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
+	::fprintf(stdout, "    I/i      Interrupt Counter Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
 }
@@ -431,7 +436,7 @@ bool CMMDVMCal::initModem()
 					return false;
 				}
 
-				return writeConfig(m_txLevel);
+				return writeConfig(m_txLevel, m_debug);
 
 				return true;
 			}
@@ -445,7 +450,7 @@ bool CMMDVMCal::initModem()
 	return false;
 }
 
-bool CMMDVMCal::writeConfig(float txlevel)
+bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 {
 	unsigned char buffer[50U];
 
@@ -461,7 +466,7 @@ bool CMMDVMCal::writeConfig(float txlevel)
 		buffer[3U] |= 0x04U;
 	if (!m_duplex)
 		buffer[3U] |= 0x80U;
-	if (m_debug)
+	if (debug)
 		buffer[3U] |= 0x10U;
 	buffer[4U] = 0x00U;
 	if (m_dmrEnabled)
@@ -518,7 +523,7 @@ bool CMMDVMCal::setRXInvert()
 
 	::fprintf(stdout, "RX Invert: %s" EOL, m_rxInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setTXInvert()
@@ -527,7 +532,7 @@ bool CMMDVMCal::setTXInvert()
 
 	::fprintf(stdout, "TX Invert: %s" EOL, m_txInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setPTTInvert()
@@ -536,7 +541,7 @@ bool CMMDVMCal::setPTTInvert()
 
 	::fprintf(stdout, "PTT Invert: %s" EOL, m_pttInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDebug()
@@ -545,7 +550,7 @@ bool CMMDVMCal::setDebug()
 
 	::fprintf(stdout, "Modem debug: %s" EOL, m_debug ? "On" : "Off");
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDMRDeviation()
@@ -558,7 +563,7 @@ bool CMMDVMCal::setDMRDeviation()
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setLowFrequencyCal()
@@ -570,7 +575,7 @@ bool CMMDVMCal::setLowFrequencyCal()
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDMRCal1K()
@@ -583,7 +588,7 @@ bool CMMDVMCal::setDMRCal1K()
 
 	::fprintf(stdout, "DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDMRDMO1K()
@@ -601,7 +606,7 @@ bool CMMDVMCal::setDMRDMO1K()
 
 		::fprintf(stdout, "DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 }
 
@@ -615,7 +620,7 @@ bool CMMDVMCal::setP25Cal1K()
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setNXDNCal1K()
@@ -628,7 +633,7 @@ bool CMMDVMCal::setNXDNCal1K()
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDMRBER_FEC()
@@ -642,7 +647,7 @@ bool CMMDVMCal::setDMRBER_FEC()
 
 	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDMRBER_1K()
@@ -656,7 +661,7 @@ bool CMMDVMCal::setDMRBER_1K()
 
 	::fprintf(stdout, "BER Test Mode (1031 Hz Test Pattern) for DMR Simplex" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setP25BER_FEC()
@@ -669,7 +674,7 @@ bool CMMDVMCal::setP25BER_FEC()
 
 	::fprintf(stdout, "BER Test Mode (FEC) for P25" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setDSTAR()
@@ -682,7 +687,7 @@ bool CMMDVMCal::setDSTAR()
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setRSSI()
@@ -695,7 +700,20 @@ bool CMMDVMCal::setRSSI()
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
+}
+
+bool CMMDVMCal::setIntCal()
+{
+	m_mode = STATE_INTCAL;
+	m_carrier = false;
+	m_duplex = true;
+	m_dmrEnabled = false;
+	m_p25Enabled = false;
+
+	::fprintf(stdout, "Interrupt Counter Mode" EOL);
+
+	return writeConfig(m_txLevel, true);
 }
 
 bool CMMDVMCal::setCarrier()
@@ -708,7 +726,7 @@ bool CMMDVMCal::setCarrier()
 
 	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
 
-	return writeConfig(0.0F);
+	return writeConfig(0.0F, m_debug);
 }
 
 bool CMMDVMCal::setEnterFreq()
@@ -737,7 +755,7 @@ bool CMMDVMCal::setEnterFreq()
 
 	displayHelp_MMDVM_HS();
 
-	return writeConfig(m_txLevel);
+	return writeConfig(m_txLevel, m_debug);
 }
 
 bool CMMDVMCal::setRXLevel(int incr)
@@ -745,13 +763,13 @@ bool CMMDVMCal::setRXLevel(int incr)
 	if (incr > 0 && m_rxLevel < 100.0F) {
 		m_rxLevel += 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	if (incr < 0 && m_rxLevel > 0.0F) {
 		m_rxLevel -= 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	return true;
@@ -763,13 +781,13 @@ bool CMMDVMCal::setTXLevel(int incr)
 		if (incr > 0 && m_txLevel < 100.0F) {
 			m_txLevel += 0.5F;
 			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-			return writeConfig(m_txLevel);
+			return writeConfig(m_txLevel, m_debug);
 		}
 
 		if (incr < 0 && m_txLevel > 0.0F) {
 			m_txLevel -= 0.5F;
 			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-			return writeConfig(m_txLevel);
+			return writeConfig(m_txLevel, m_debug);
 		}
 	}
 
@@ -785,9 +803,9 @@ bool CMMDVMCal::setFreq(int incr)
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
 		if (m_carrier)
-			ret = writeConfig(0.0F);
+			ret = writeConfig(0.0F, m_debug);
 		else
-			ret = writeConfig(m_txLevel);
+			ret = writeConfig(m_txLevel, m_debug);
 		return ret;
 	}
 
@@ -796,9 +814,9 @@ bool CMMDVMCal::setFreq(int incr)
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
 		if (m_carrier)
-			ret = writeConfig(0.0F);
+			ret = writeConfig(0.0F, m_debug);
 		else
-			ret = writeConfig(m_txLevel);
+			ret = writeConfig(m_txLevel, m_debug);
 		return ret;
 	}
 
@@ -811,14 +829,14 @@ bool CMMDVMCal::setPower(int incr)
 		m_power += 1.0F;
 		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
 		setFrequency();
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	if (incr < 0 && m_power > 0.0F) {
 		m_power -= 1.0F;
 		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
 		setFrequency();
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	return true;
@@ -829,13 +847,13 @@ bool CMMDVMCal::setTXDCOffset(int incr)
 	if (incr > 0 && m_txDCOffset < 127) {
 		m_txDCOffset++;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	if (incr < 0 && m_txDCOffset > -128) {
 		m_txDCOffset--;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	return true;
@@ -846,13 +864,13 @@ bool CMMDVMCal::setRXDCOffset(int incr)
 	if (incr > 0 && m_rxDCOffset < 127) {
 		m_rxDCOffset++;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	if (incr < 0 && m_rxDCOffset > -128) {
 		m_rxDCOffset--;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig(m_txLevel);
+		return writeConfig(m_txLevel, m_debug);
 	}
 
 	return true;

@@ -56,6 +56,7 @@ the following commands:
 <tr><td>J/j</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
 <tr><td>b</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
+<tr><td>I/i</td><td>Interrupt Counter Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
 <tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
 </table>
