@@ -632,7 +632,7 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 		::fprintf(stdout, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)" EOL, dmr_seq, dmr_ber, errors);
 }
 
-void CBERCal::IMBEFEC(const unsigned char* buffer)
+void CBERCal::P25FEC(const unsigned char* buffer)
 {
 	unsigned char nid[8U];
 	CP25Utils::decode(buffer + 1U, nid, 48U, 114U);

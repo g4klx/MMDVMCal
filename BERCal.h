@@ -27,7 +27,7 @@ public:
 
 	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq);
 	void DMR1K(const unsigned char *buffer, const unsigned char m_seq);
-	void IMBEFEC(const unsigned char* buffer);
+	void P25FEC(const unsigned char* buffer);
 
 private:
 	unsigned int m_errors;
