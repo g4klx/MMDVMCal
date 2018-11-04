@@ -77,6 +77,7 @@ private:
 	float             m_power;
 	MMDVM_STATE       m_mode;
 	bool              m_duplex;
+	bool              m_debug;
 	unsigned char*    m_buffer;
 	unsigned int      m_length;
 	unsigned int      m_offset;
@@ -97,6 +98,7 @@ private:
 	bool setTXInvert();
 	bool setRXInvert();
 	bool setPTTInvert();
+	bool setDebug();
 	bool setFreq(int incr);
 	bool setPower(int incr);
 	bool setCarrier();

@@ -73,6 +73,7 @@ m_startfrequency(433000000U),
 m_power(100.0F),
 m_mode(STATE_DSTARCAL),
 m_duplex(true),
+m_debug(false),
 m_buffer(NULL),
 m_length(0U),
 m_offset(0U),
@@ -139,6 +140,10 @@ void CMMDVMCal::loop_MMDVM()
 			case 'H':
 			case 'h':
 				displayHelp_MMDVM();
+				break;
+			case 'W':
+			case 'w':
+				setDebug();
 				break;
 			case 'T':
 				setTXLevel(1);
@@ -244,6 +249,8 @@ void CMMDVMCal::displayHelp_MMDVM()
 {
 	::fprintf(stdout, "The commands are:" EOL);
 	::fprintf(stdout, "    H/h      Display help" EOL);
+	::fprintf(stdout, "    Q/q      Quit" EOL);
+	::fprintf(stdout, "    W/w      Enable/disable modem debug messages" EOL);
 	::fprintf(stdout, "    I        Toggle transmit inversion" EOL);
 	::fprintf(stdout, "    i        Toggle receive inversion" EOL);
 	::fprintf(stdout, "    O        Increase TX DC offset level" EOL);
@@ -251,7 +258,6 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    C        Increase RX DC offset level" EOL);
 	::fprintf(stdout, "    c        Decrease RX DC offset level" EOL);
 	::fprintf(stdout, "    P/p      Toggle PTT inversion" EOL);
-	::fprintf(stdout, "    Q/q      Quit" EOL);
 	::fprintf(stdout, "    R        Increase receive level" EOL);
 	::fprintf(stdout, "    r        Decrease receive level" EOL);
 	::fprintf(stdout, "    T        Increase transmit level" EOL);
@@ -287,6 +293,10 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'H':
 			case 'h':
 				displayHelp_MMDVM_HS();
+				break;
+			case 'W':
+			case 'w':
+				setDebug();
 				break;
 			case 'C':
 			case 'c':
@@ -369,6 +379,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "The commands are:" EOL);
 	::fprintf(stdout, "    H/h      Display help" EOL);
 	::fprintf(stdout, "    Q/q      Quit" EOL);
+	::fprintf(stdout, "    W/w      Enable/disable modem debug messages" EOL);
 	::fprintf(stdout, "    E/e      Enter frequency (current: %u Hz)" EOL, m_frequency);
 	::fprintf(stdout, "    F        Increase frequency" EOL);
 	::fprintf(stdout, "    f        Decrease frequency" EOL);
@@ -450,6 +461,8 @@ bool CMMDVMCal::writeConfig(float txlevel)
 		buffer[3U] |= 0x04U;
 	if (!m_duplex)
 		buffer[3U] |= 0x80U;
+	if (m_debug)
+		buffer[3U] |= 0x10U;
 	buffer[4U] = 0x00U;
 	if (m_dmrEnabled)
 		buffer[4U] |= 0x02U;
@@ -522,6 +535,15 @@ bool CMMDVMCal::setPTTInvert()
 	m_pttInvert = !m_pttInvert;
 
 	::fprintf(stdout, "PTT Invert: %s" EOL, m_pttInvert ? "On" : "Off");
+
+	return writeConfig(m_txLevel);
+}
+
+bool CMMDVMCal::setDebug()
+{
+	m_debug = !m_debug;
+
+	::fprintf(stdout, "Modem debug: %s" EOL, m_debug ? "On" : "Off");
 
 	return writeConfig(m_txLevel);
 }

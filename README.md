@@ -8,6 +8,8 @@ the following commands:
 <table>
 <tr><th>Command</th><th>Description</th></tr>
 <tr><td>H/h</td><td>Display help</td></tr>
+<tr><td>Q/q</td><td>Quit</td></tr>
+<tr><td>W/w</td><td>Enable/disable modem debug messages</td></tr>
 <tr><td>I</td><td>Toggle transmit inversion</td><tr>
 <tr><td>i</td><td>Toggle receive inversion</td></tr>
 <tr><td>O</td><td>Increase TX DC offset level</td></tr>
@@ -15,7 +17,6 @@ the following commands:
 <tr><td>C</td><td>Increase RX DC offset level</td></tr>
 <tr><td>c</td><td>Decrease RX DC offset level</td></tr>
 <tr><td>P/p</td><td>Toggle PTT inversion</td></tr>
-<tr><td>Q/q</td><td>Quit</td></tr>
 <tr><td>R</td><td>Increase receive level</td></tr>
 <tr><td>r</td><td>Decrease receive level</td></tr>
 <tr><td>T</td><td>Increase transmit level</td></tr>
@@ -40,6 +41,7 @@ the following commands:
 <tr><th>Command</th><th>Description</th></tr>
 <tr><td>H/h</td><td>Display help</td></tr>
 <tr><td>Q/q</td><td>Quit</td></tr>
+<tr><td>W/w</td><td>Enable/disable modem debug messages</td></tr>
 <tr><td>E/e</td><td>Enter frequency</td><tr>
 <tr><td>F</td><td>Increase frequency</td></tr>
 <tr><td>f</td><td>Decrease frequency</td></tr>
