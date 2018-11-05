@@ -995,7 +995,10 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 		else
 			m_ber.DMR1K(buffer + 4U, buffer[3]);
 	} else if (buffer[2U] == 0x30U || buffer[2U] == 0x31U) {
-		m_ber.P25FEC(buffer + 3U);
+		m_ber.P25FEC(buffer + 4U);
+	} else if (buffer[2U] == 0x40U) {
+		if (buffer[3U] == 1U)
+			m_ber.NXDNFEC(buffer + 4U);
 	} else if (m_hwType == HWT_MMDVM && m_mode != STATE_DMR && m_mode != STATE_P25 && m_mode != STATE_NXDN) {
 		CUtils::dump("Response", buffer, length);
 	}

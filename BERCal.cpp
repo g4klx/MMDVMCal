@@ -35,6 +35,7 @@
 #endif
 
 const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
+#define WRITE_BIT(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~BIT_MASK_TABLE[(i)&7])
 #define READ_BIT(p,i)    (p[(i)>>3] & BIT_MASK_TABLE[(i)&7])
 
 const unsigned int DMR_A_TABLE[] = { 0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
@@ -497,6 +498,15 @@ const unsigned char VOICE_1K[6][33] = {
 	 0xFEU, 0x83U, 0xA1U, 0x10U, 0x00U, 0x00U, 0x00U, 0x0EU, 0x2CU, 0xC4U, 0x58U, 
 	 0x20U, 0x0AU, 0xCEU, 0xA8U, 0xFEU, 0x83U, 0xACU, 0xC4U, 0x58U, 0x20U, 0x0AU}};
 
+const unsigned int NXDN_FRAME_LENGTH_BYTES = 48U;
+const unsigned int NXDN_FSW_LICH_SACCH_LENGTH_BYTES = 12U;
+
+const unsigned char NXDN_SCRAMBLER[] = {
+	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
+	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
+	0x28U, 0x28U, 0x00U, 0x0AU, 0x02U, 0x82U, 0x20U, 0x28U, 0x82U, 0x2AU, 0xAAU, 0x20U, 0x22U, 0x80U,
+	0xA8U, 0x8AU, 0x08U, 0xA0U, 0xAAU, 0x02U};
+
 CBERCal::CBERCal():
 m_errors(0U),
 m_bits(0U),
@@ -635,7 +645,7 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 void CBERCal::P25FEC(const unsigned char* buffer)
 {
 	unsigned char nid[8U];
-	CP25Utils::decode(buffer + 1U, nid, 48U, 114U);
+	CP25Utils::decode(buffer, nid, 48U, 114U);
 	unsigned char duid = nid[1U] & 0x0FU;
 
 	unsigned int errs = 0U;
@@ -656,77 +666,104 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 		return;
 	}
 	else if (duid == 0x05U) {
-		CP25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+		CP25Utils::decode(buffer, imbe, 114U, 262U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+		CP25Utils::decode(buffer, imbe, 262U, 410U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+		CP25Utils::decode(buffer, imbe, 452U, 600U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+		CP25Utils::decode(buffer, imbe, 640U, 788U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+		CP25Utils::decode(buffer, imbe, 830U, 978U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+		CP25Utils::decode(buffer, imbe, 1020U, 1168U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+		CP25Utils::decode(buffer, imbe, 1208U, 1356U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+		CP25Utils::decode(buffer, imbe, 1398U, 1546U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+		CP25Utils::decode(buffer, imbe, 1578U, 1726U);
 		errs += regenerateIMBE(imbe);
 
 		float ber = float(errs) / 12.33F;
 		if (ber < 10.0F)
-			::fprintf(stdout, "P25 LDU1 audio FEC BER (errs): %.3f%% (%u/1233)" EOL, ber, errs);
+			::fprintf(stdout, "P25 LDU1 audio FEC BER %% (errs): %.3f%% (%u/1233)" EOL, ber, errs);
 
 		m_bits += 1233U;
 		m_errors += errs;
 		m_frames++;
 	}
 	else if (duid == 0x0AU) {
-		CP25Utils::decode(buffer + 1U, imbe, 114U, 262U);
+		CP25Utils::decode(buffer, imbe, 114U, 262U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 262U, 410U);
+		CP25Utils::decode(buffer, imbe, 262U, 410U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 452U, 600U);
+		CP25Utils::decode(buffer, imbe, 452U, 600U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 640U, 788U);
+		CP25Utils::decode(buffer, imbe, 640U, 788U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 830U, 978U);
+		CP25Utils::decode(buffer, imbe, 830U, 978U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1020U, 1168U);
+		CP25Utils::decode(buffer, imbe, 1020U, 1168U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1208U, 1356U);
+		CP25Utils::decode(buffer, imbe, 1208U, 1356U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1398U, 1546U);
+		CP25Utils::decode(buffer, imbe, 1398U, 1546U);
 		errs += regenerateIMBE(imbe);
 
-		CP25Utils::decode(buffer + 1U, imbe, 1578U, 1726U);
+		CP25Utils::decode(buffer, imbe, 1578U, 1726U);
 		errs += regenerateIMBE(imbe);
 
 		float ber = float(errs) / 12.33F;
 		if (ber < 10.0F)
-			::fprintf(stdout, "P25 LDU2 audio FEC BER (errs): %.3f%% (%u/1233)" EOL, ber, errs);
+			::fprintf(stdout, "P25 LDU2 audio FEC BER %% (errs): %.3f%% (%u/1233)" EOL, ber, errs);
 
 		m_bits += 1233U;
 		m_errors += errs;
 		m_frames++;
 	}
+}
+
+void CBERCal::NXDNFEC(const unsigned char* buffer)
+{
+	unsigned char data[NXDN_FRAME_LENGTH_BYTES];
+
+	::memcpy(data, buffer, NXDN_FRAME_LENGTH_BYTES);
+
+	NXDNScrambler(data);
+
+	unsigned int errors = 0U;
+	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
+	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
+	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
+	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+
+	m_bits += 188U;
+	m_errors += errors;
+	m_frames++;
+
+	::fprintf(stdout, "NXDN audio FEC BER %% (errs): %.3f%% (%u/188)" EOL, float(errors) / 1.88F, errors);
+}
+
+void CBERCal::NXDNScrambler(unsigned char* data)
+{
+	for (unsigned int i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
+		data[i] ^= NXDN_SCRAMBLER[i];
 }
 
 unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c)
@@ -895,6 +932,55 @@ unsigned int CBERCal::regenerateIMBE(const unsigned char* bytes)
 	for (unsigned int i = 0U; i < 144U; i++) {
 		if (orig[i] != temp[i])
 			errors++;
+	}
+
+	return errors;
+}
+
+unsigned int CBERCal::regenerateYSFDN(unsigned char* bytes)
+{
+	unsigned int a = 0U;
+	unsigned int MASK = 0x800000U;
+	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
+		unsigned int aPos = DMR_A_TABLE[i];
+		if (READ_BIT(bytes, aPos))
+			a |= MASK;
+	}
+
+	unsigned int b = 0U;
+	MASK = 0x400000U;
+	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
+		unsigned int bPos = DMR_B_TABLE[i];
+		if (READ_BIT(bytes, bPos))
+			b |= MASK;
+	}
+
+	unsigned int c = 0U;
+	MASK = 0x1000000U;
+	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
+		unsigned int cPos = DMR_C_TABLE[i];
+		if (READ_BIT(bytes, cPos))
+			c |= MASK;
+	}
+
+	unsigned int errors = regenerateDMR(a, b, c);
+
+	MASK = 0x800000U;
+	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
+		unsigned int aPos = DMR_A_TABLE[i];
+		WRITE_BIT(bytes, aPos, a & MASK);
+	}
+
+	MASK = 0x400000U;
+	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
+		unsigned int bPos = DMR_B_TABLE[i];
+		WRITE_BIT(bytes, bPos, b & MASK);
+	}
+
+	MASK = 0x1000000U;
+	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
+		unsigned int cPos = DMR_C_TABLE[i];
+		WRITE_BIT(bytes, cPos, c & MASK);
 	}
 
 	return errors;

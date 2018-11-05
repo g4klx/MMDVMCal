@@ -28,14 +28,17 @@ public:
 	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq);
 	void DMR1K(const unsigned char *buffer, const unsigned char m_seq);
 	void P25FEC(const unsigned char* buffer);
+	void NXDNFEC(const unsigned char* buffer);
 
 private:
 	unsigned int m_errors;
 	unsigned int m_bits;
 	unsigned int m_frames;
 
+	void NXDNScrambler(unsigned char* data);
 	unsigned int regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c);
 	unsigned int regenerateIMBE(const unsigned char* bytes);
+	unsigned int regenerateYSFDN(unsigned char* bytes);
 
 	unsigned char countErrs(unsigned char a, unsigned char b);
 };
