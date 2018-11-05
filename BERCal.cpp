@@ -38,6 +38,13 @@
 const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
 #define READ_BIT(p,i)    (p[(i)>>3] & BIT_MASK_TABLE[(i)&7])
 
+const unsigned int DSTAR_A_TABLE[] = {0U,  6U, 12U, 18U, 24U, 30U, 36U, 42U, 48U, 54U, 60U, 66U,
+									  1U,  7U, 13U, 19U, 25U, 31U, 37U, 43U, 49U, 55U, 61U, 67U};
+const unsigned int DSTAR_B_TABLE[] = {2U,  8U, 14U, 20U, 26U, 32U, 38U, 44U, 50U, 56U, 62U, 68U,
+									  3U,  9U, 15U, 21U, 27U, 33U, 39U, 45U, 51U, 57U, 63U, 69U};
+const unsigned int DSTAR_C_TABLE[] = {4U, 10U, 16U, 22U, 28U, 34U, 40U, 46U, 52U, 58U, 64U, 70U,
+									  5U, 11U, 17U, 23U, 29U, 35U, 41U, 47U, 53U, 59U, 65U, 71U};
+
 const unsigned int DMR_A_TABLE[] = { 0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
 									48U, 52U, 56U, 60U, 64U, 68U,  1U,  5U,  9U, 13U, 17U, 21U};
 const unsigned int DMR_B_TABLE[] = {25U, 29U, 33U, 37U, 41U, 45U, 49U, 53U, 57U, 61U, 65U, 69U,
@@ -518,6 +525,32 @@ CBERCal::~CBERCal()
 {
 }
 
+void CBERCal::DSTARFEC(const unsigned char* buffer)
+{
+	unsigned int a = 0U;
+	unsigned int b = 0U;
+	unsigned int c = 0U;
+
+	unsigned int MASK = 0x800000U;
+	for (unsigned int i = 0U; i < 24U; i++) {
+		if (READ_BIT(buffer, DSTAR_A_TABLE[i]))
+			a |= MASK;
+		if (READ_BIT(buffer, DSTAR_B_TABLE[i]))
+			b |= MASK;
+		if (READ_BIT(buffer, DSTAR_C_TABLE[i]))
+			c |= MASK;
+		MASK >>= 1;
+	}
+
+	unsigned int errors = regenerateDStar(a, b);
+
+	m_bits += 188U;
+	m_errors += errors;
+	m_frames++;
+
+	::fprintf(stdout, "D-Star audio FEC BER %% (errs): %.3f%% (%u/48)" EOL, float(errors) / 0.48F, errors);
+}
+
 void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 {
 	if (m_seq == 65U) {
@@ -764,6 +797,43 @@ void CBERCal::NXDNScrambler(unsigned char* data)
 {
 	for (unsigned int i = 0U; i < NXDN_FRAME_LENGTH_BYTES; i++)
 		data[i] ^= NXDN_SCRAMBLER[i];
+}
+
+unsigned int CBERCal::regenerateDStar(unsigned int& a, unsigned int& b)
+{
+	unsigned int orig_a = a;
+	unsigned int orig_b = b;
+
+	unsigned int data = CGolay24128::decode24128(a);
+
+	a = CGolay24128::encode24128(data);
+
+	// The PRNG
+	unsigned int p = PRNG_TABLE[data];
+
+	b ^= p;
+
+	unsigned int datb = CGolay24128::decode24128(b);
+
+	b = CGolay24128::encode24128(datb);
+
+	b ^= p;
+
+	unsigned int errsA = 0U, errsB = 0U;
+
+	unsigned int v = a ^ orig_a;
+	while (v != 0U) {
+		v &= v - 1U;
+		errsA++;
+	}
+
+	v = b ^ orig_b;
+	while (v != 0U) {
+		v &= v - 1U;
+		errsB++;
+	}
+
+	return errsA + errsB;
 }
 
 unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned int& c)
