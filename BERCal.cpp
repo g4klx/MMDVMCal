@@ -36,7 +36,6 @@
 #endif
 
 const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
-#define WRITE_BIT(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~BIT_MASK_TABLE[(i)&7])
 #define READ_BIT(p,i)    (p[(i)>>3] & BIT_MASK_TABLE[(i)&7])
 
 const unsigned int DMR_A_TABLE[] = { 0U,  4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U,
@@ -801,12 +800,6 @@ unsigned int CBERCal::regenerateDMR(unsigned int& a, unsigned int& b, unsigned i
 		errsB++;
 	}
 
-	if (errsA >= 4U || ((errsA + errsB) >= 6U && errsA >= 2U)) {
-		a = 0xF00292U;
-		b = 0x0E0B20U;
-		c = 0x000000U;
-	}
-
 	return errsA + errsB;
 }
 
@@ -964,27 +957,7 @@ unsigned int CBERCal::regenerateYSFDN(unsigned char* bytes)
 			c |= MASK;
 	}
 
-	unsigned int errors = regenerateDMR(a, b, c);
-
-	MASK = 0x800000U;
-	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
-		unsigned int aPos = DMR_A_TABLE[i];
-		WRITE_BIT(bytes, aPos, a & MASK);
-	}
-
-	MASK = 0x400000U;
-	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
-		unsigned int bPos = DMR_B_TABLE[i];
-		WRITE_BIT(bytes, bPos, b & MASK);
-	}
-
-	MASK = 0x1000000U;
-	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
-		unsigned int cPos = DMR_C_TABLE[i];
-		WRITE_BIT(bytes, cPos, c & MASK);
-	}
-
-	return errors;
+	return regenerateDMR(a, b, c);
 }
 
 unsigned char CBERCal::countErrs(unsigned char a, unsigned char b)
