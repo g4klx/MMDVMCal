@@ -40,8 +40,10 @@ enum HW_TYPE {
 };
 
 enum MMDVM_STATE {
+  STATE_IDLE      = 0,
   STATE_DMR       = 2,
   STATE_P25       = 4,
+  STATE_NXDN      = 5,
   STATE_NXDNCAL1K = 91,
   STATE_DMRDMO1K  = 92,
   STATE_P25CAL1K  = 93,
@@ -86,6 +88,7 @@ private:
 	bool              m_dmrEnabled;
 	bool              m_dmrBERFEC;
 	bool              m_p25Enabled;
+	bool              m_nxdnEnabled;
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
@@ -112,6 +115,7 @@ private:
 	bool setNXDNCal1K();
 	bool setDMRBER_FEC();
 	bool setDMRBER_1K();
+	bool setNXDNBER_FEC();
 	bool setP25BER_FEC();
 	bool setDSTAR();
 	bool setRSSI();

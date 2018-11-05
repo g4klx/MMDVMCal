@@ -21,15 +21,17 @@ the following commands:
 <tr><td>r</td><td>Decrease receive level</td></tr>
 <tr><td>T</td><td>Increase transmit level</td></tr>
 <tr><td>t</td><td>Decrease transmit level</td></tr>
+<tr><td>d</td><td>D-Star mode</td></tr>
 <tr><td>D</td><td>Set DMR Deviation Mode. Generates a 1.2Khz Sinewave. Set radio for 2.75 Khz Deviation</td></tr>
 <tr><td>L/l</td><td>DMR Low Frequency Mode (80 Hz square wave)</td></tr>
 <tr><td>A</td><td>DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)</td></tr>
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
-<tr><td>B</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
-<tr><td>J/j</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
-<tr><td>b</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>a</td><td>P25 1011 Hz Test Pattern (NAC293 ID1 TG1)</td></tr>
-<tr><td>d</td><td>D-Star mode</td></tr>
+<tr><td>N</td><td>NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)</td></tr>
+<tr><td>b</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
+<tr><td>B</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
+<tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
+<tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
 <tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
@@ -52,9 +54,10 @@ the following commands:
 <tr><td>C/c</td><td>Carrier Only Mode</td></tr>
 <tr><td>D/d</td><td>DMR Deviation Mode</td></tr>
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
-<tr><td>B</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
-<tr><td>J/j</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
-<tr><td>b</td><td>BER Test Mode (FEC) for P25</td></tr>
+<tr><td>b</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
+<tr><td>B</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
+<tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
+<tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>I/i</td><td>Interrupt Counter Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
