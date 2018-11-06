@@ -28,8 +28,10 @@ the following commands:
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
 <tr><td>a</td><td>P25 1011 Hz Test Pattern (NAC293 ID1 TG1)</td></tr>
 <tr><td>N</td><td>NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)</td></tr>
+<tr><td>K/k</td><td>BER Test Mode (FEC) for D-Star</td></tr>
 <tr><td>b</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
 <tr><td>B</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
+<tr><td>J</td><td>BER Test Mode (FEC) for YSF</td></tr>
 <tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
@@ -54,8 +56,10 @@ the following commands:
 <tr><td>C/c</td><td>Carrier Only Mode</td></tr>
 <tr><td>D/d</td><td>DMR Deviation Mode</td></tr>
 <tr><td>M/m</td><td>DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)</td></tr>
+<tr><td>K/k</td><td>BER Test Mode (FEC) for D-Star</td></tr>
 <tr><td>b</td><td>BER Test Mode (FEC) for DMR Simplex (CC1)</td></tr>
 <tr><td>B</td><td>BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)</td></tr>
+<tr><td>J</td><td>BER Test Mode (FEC) for YSF</td></tr>
 <tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>

@@ -77,8 +77,10 @@ m_debug(false),
 m_buffer(NULL),
 m_length(0U),
 m_offset(0U),
+m_dstarEnabled(false),
 m_dmrEnabled(false),
 m_dmrBERFEC(true),
+m_ysfEnabled(false),
 m_p25Enabled(false),
 m_nxdnEnabled(false)
 {
@@ -208,11 +210,18 @@ void CMMDVMCal::loop_MMDVM()
 			case 'm':
 				setDMRDMO1K();
 				break;
+			case 'K':
+			case 'k':
+				setDSTARBER_FEC();
+				break;
 			case 'b':
 				setDMRBER_FEC();
 				break;
 			case 'B':
 				setDMRBER_1K();
+				break;
+			case 'J':
+				setYSFBER_FEC();
 				break;
 			case 'j':
 				setP25BER_FEC();
@@ -271,8 +280,10 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    a        P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 	::fprintf(stdout, "    N        NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
+	::fprintf(stdout, "    K/k      BER Test Mode (FEC) for D-Star" EOL);
 	::fprintf(stdout, "    b        BER Test Mode (FEC) for DMR Simplex (CC1)" EOL);
 	::fprintf(stdout, "    B        BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    J        BER Test Mode (FEC) for YSF" EOL);
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
@@ -346,11 +357,18 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'm':
 				setDMRDMO1K();
 				break;
+			case 'K':
+			case 'k':
+				setDSTARBER_FEC();
+				break;
 			case 'b':
 				setDMRBER_FEC();
 				break;
 			case 'B':
 				setDMRBER_1K();
+				break;
+			case 'J':
+				setYSFBER_FEC();
 				break;
 			case 'j':
 				setP25BER_FEC();
@@ -399,8 +417,10 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    K/k      BER Test Mode (FEC) for D-Star" EOL);
 	::fprintf(stdout, "    b        BER Test Mode (FEC) for DMR Simplex (CC1)" EOL);
 	::fprintf(stdout, "    B        BER Test Mode (1031 Hz Test Pattern) for DMR Simplex (CC1 ID1 TG9)" EOL);
+	::fprintf(stdout, "    J        BER Test Mode (FEC) for YSF" EOL);
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
@@ -475,8 +495,12 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	if (debug)
 		buffer[3U] |= 0x10U;
 	buffer[4U] = 0x00U;
+	if (m_dstarEnabled)
+		buffer[4U] |= 0x01U;
 	if (m_dmrEnabled)
 		buffer[4U] |= 0x02U;
+	if (m_ysfEnabled)
+		buffer[4U] |= 0x04U;
 	if (m_p25Enabled)
 		buffer[4U] |= 0x08U;
 	if (m_nxdnEnabled)
@@ -566,7 +590,9 @@ bool CMMDVMCal::setDMRDeviation()
 	m_mode = STATE_DMRCAL;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -580,7 +606,9 @@ bool CMMDVMCal::setLowFrequencyCal()
 	m_mode = STATE_LFCAL;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -594,7 +622,9 @@ bool CMMDVMCal::setDMRCal1K()
 	m_mode = STATE_DMRCAL1K;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -613,7 +643,9 @@ bool CMMDVMCal::setDMRDMO1K()
 		m_mode = STATE_DMRDMO1K;
 		m_carrier = false;
 		m_duplex = true;
+		m_dstarEnabled = false;
 		m_dmrEnabled = false;
+		m_ysfEnabled = false;
 		m_p25Enabled = false;
 		m_nxdnEnabled = false;
 
@@ -628,7 +660,9 @@ bool CMMDVMCal::setP25Cal1K()
 	m_mode = STATE_P25CAL1K;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -642,11 +676,29 @@ bool CMMDVMCal::setNXDNCal1K()
 	m_mode = STATE_NXDNCAL1K;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
+
+	return writeConfig(m_txLevel, m_debug);
+}
+
+bool CMMDVMCal::setDSTARBER_FEC()
+{
+	m_mode = STATE_DSTAR;
+	m_carrier = false;
+	m_duplex = false;
+	m_dstarEnabled = true;
+	m_dmrEnabled = false;
+	m_ysfEnabled = false;
+	m_p25Enabled = false;
+	m_nxdnEnabled = false;
+
+	::fprintf(stdout, "BER Test Mode (FEC) for D-Star" EOL);
 
 	return writeConfig(m_txLevel, m_debug);
 }
@@ -656,8 +708,10 @@ bool CMMDVMCal::setDMRBER_FEC()
 	m_mode = STATE_DMR;
 	m_carrier = false;
 	m_duplex = false;
+	m_dstarEnabled = false;
 	m_dmrEnabled = true;
 	m_dmrBERFEC = true;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -671,12 +725,30 @@ bool CMMDVMCal::setDMRBER_1K()
 	m_mode = STATE_DMR;
 	m_carrier = false;
 	m_duplex = false;
+	m_dstarEnabled = false;
 	m_dmrEnabled = true;
 	m_dmrBERFEC = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (1031 Hz Test Pattern) for DMR Simplex" EOL);
+
+	return writeConfig(m_txLevel, m_debug);
+}
+
+bool CMMDVMCal::setYSFBER_FEC()
+{
+	m_mode = STATE_YSF;
+	m_carrier = false;
+	m_duplex = false;
+	m_dstarEnabled = true;
+	m_dmrEnabled = false;
+	m_ysfEnabled = true;
+	m_p25Enabled = false;
+	m_nxdnEnabled = false;
+
+	::fprintf(stdout, "BER Test Mode (FEC) for YSF" EOL);
 
 	return writeConfig(m_txLevel, m_debug);
 }
@@ -686,7 +758,9 @@ bool CMMDVMCal::setP25BER_FEC()
 	m_mode = STATE_P25;
 	m_carrier = false;
 	m_duplex = false;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = true;
 	m_nxdnEnabled = false;
 
@@ -700,7 +774,9 @@ bool CMMDVMCal::setNXDNBER_FEC()
 	m_mode = STATE_NXDN;
 	m_carrier = false;
 	m_duplex = false;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = true;
 
@@ -714,7 +790,9 @@ bool CMMDVMCal::setDSTAR()
 	m_mode = STATE_DSTARCAL;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -728,7 +806,9 @@ bool CMMDVMCal::setRSSI()
 	m_mode = STATE_RSSICAL;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -742,7 +822,9 @@ bool CMMDVMCal::setIntCal()
 	m_mode = STATE_INTCAL;
 	m_carrier = false;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -756,7 +838,9 @@ bool CMMDVMCal::setCarrier()
 	m_mode = STATE_DMRCAL;
 	m_carrier = true;
 	m_duplex = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
+	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 
@@ -989,11 +1073,15 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 		short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d %d" EOL, length - 11U, buffer + 3U, val1, val2, val3, val4);
+	} else if (buffer[2U] == 0x10U || buffer[2U] == 0x11U || buffer[2U] == 0x12U || buffer[2U] == 0x13U) {
+		m_ber.DSTARFEC(buffer + 3U, buffer[2U]);
 	} else if (buffer[2U] == 0x18U || buffer[2U] == 0x1AU) {
 		if (m_dmrBERFEC)
 			m_ber.DMRFEC(buffer + 4U, buffer[3]);
 		else
 			m_ber.DMR1K(buffer + 4U, buffer[3]);
+	} else if (buffer[2U] == 0x20U) {
+		m_ber.YSFFEC(buffer + 4U);
 	} else if (buffer[2U] == 0x30U || buffer[2U] == 0x31U) {
 		m_ber.P25FEC(buffer + 4U);
 	} else if (buffer[2U] == 0x40U) {

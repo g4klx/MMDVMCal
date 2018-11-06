@@ -41,9 +41,12 @@ enum HW_TYPE {
 
 enum MMDVM_STATE {
   STATE_IDLE      = 0,
+  STATE_DSTAR     = 1,
   STATE_DMR       = 2,
+  STATE_YSF       = 3,
   STATE_P25       = 4,
   STATE_NXDN      = 5,
+  STATE_POCSAG    = 6,
   STATE_NXDNCAL1K = 91,
   STATE_DMRDMO1K  = 92,
   STATE_P25CAL1K  = 93,
@@ -85,8 +88,10 @@ private:
 	unsigned int      m_length;
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
+	bool              m_dstarEnabled;
 	bool              m_dmrEnabled;
 	bool              m_dmrBERFEC;
+	bool              m_ysfEnabled;
 	bool              m_p25Enabled;
 	bool              m_nxdnEnabled;
 
@@ -113,10 +118,12 @@ private:
 	bool setDMRDMO1K();
 	bool setP25Cal1K();
 	bool setNXDNCal1K();
+	bool setDSTARBER_FEC();
 	bool setDMRBER_FEC();
 	bool setDMRBER_1K();
-	bool setNXDNBER_FEC();
+	bool setYSFBER_FEC();
 	bool setP25BER_FEC();
+	bool setNXDNBER_FEC();
 	bool setDSTAR();
 	bool setRSSI();
 	bool setIntCal();

@@ -525,30 +525,44 @@ CBERCal::~CBERCal()
 {
 }
 
-void CBERCal::DSTARFEC(const unsigned char* buffer)
+void CBERCal::DSTARFEC(const unsigned char* buffer, const unsigned char m_tag)
 {
 	unsigned int a = 0U;
 	unsigned int b = 0U;
 	unsigned int c = 0U;
 
-	unsigned int MASK = 0x800000U;
-	for (unsigned int i = 0U; i < 24U; i++) {
-		if (READ_BIT(buffer, DSTAR_A_TABLE[i]))
-			a |= MASK;
-		if (READ_BIT(buffer, DSTAR_B_TABLE[i]))
-			b |= MASK;
-		if (READ_BIT(buffer, DSTAR_C_TABLE[i]))
-			c |= MASK;
-		MASK >>= 1;
+	if (m_tag == 0x10U) {
+		::fprintf(stdout, "D-Star voice header received" EOL);
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	} else if (m_tag == 0x13U) {
+		::fprintf(stdout, "D-Star voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	} else if (m_tag == 0x11U) {
+			unsigned int MASK = 0x800000U;
+			for (unsigned int i = 0U; i < 24U; i++) {
+			if (READ_BIT(buffer, DSTAR_A_TABLE[i]))
+				a |= MASK;
+			if (READ_BIT(buffer, DSTAR_B_TABLE[i]))
+				b |= MASK;
+			if (READ_BIT(buffer, DSTAR_C_TABLE[i]))
+				c |= MASK;
+			MASK >>= 1;
+		}
+
+		unsigned int errors = regenerateDStar(a, b);
+
+		m_bits += 48U;
+		m_errors += errors;
+		m_frames++;
+
+		::fprintf(stdout, "D-Star audio FEC BER %% (errs): %.3f%% (%u/48)" EOL, float(errors) / 0.48F, errors);
 	}
-
-	unsigned int errors = regenerateDStar(a, b);
-
-	m_bits += 188U;
-	m_errors += errors;
-	m_frames++;
-
-	::fprintf(stdout, "D-Star audio FEC BER %% (errs): %.3f%% (%u/48)" EOL, float(errors) / 0.48F, errors);
 }
 
 void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
@@ -673,6 +687,11 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 
 	if (dmr_ber < 10.0F)
 		::fprintf(stdout, "DMR audio seq. %d, 1031 Test Pattern BER %% (errs): %.3f%% (%u/264)" EOL, dmr_seq, dmr_ber, errors);
+}
+
+void CBERCal::YSFFEC(const unsigned char* buffer)
+{
+
 }
 
 void CBERCal::P25FEC(const unsigned char* buffer)
