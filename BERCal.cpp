@@ -2,6 +2,7 @@
  *   Copyright (C) 2010,2014,2016,2018 by Jonathan Naylor G4KLX
  *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
+ *   Copyright (C) 2016 Mathias Weyland, HB9FRV
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -36,6 +37,8 @@
 #endif
 
 const unsigned char BIT_MASK_TABLE[] = {0x80U, 0x40U, 0x20U, 0x10U, 0x08U, 0x04U, 0x02U, 0x01U};
+
+#define WRITE_BIT(p,i,b) p[(i)>>3] = (b) ? (p[(i)>>3] | BIT_MASK_TABLE[(i)&7]) : (p[(i)>>3] & ~BIT_MASK_TABLE[(i)&7])
 #define READ_BIT(p,i)    (p[(i)>>3] & BIT_MASK_TABLE[(i)&7])
 
 const unsigned int DSTAR_A_TABLE[] = {0U,  6U, 12U, 18U, 24U, 30U, 36U, 42U, 48U, 54U, 60U, 66U,
@@ -464,6 +467,15 @@ const unsigned int PRNG_TABLE[] = {
 	0xECDB0FU, 0xB542DAU, 0x9E5131U, 0xC7ABA5U, 0x8C38FEU, 0x97010BU, 0xDED290U, 0xA4CC7DU, 0xAD3D2EU, 0xF6B6B3U, 
 	0xF9A540U, 0x205ED9U, 0x634EB6U, 0x5A9567U, 0x11A6D8U, 0x0B3F09U};
 
+const unsigned int INTERLEAVE_TABLE_26_4[] = {
+	0U, 4U,  8U, 12U, 16U, 20U, 24U, 28U, 32U, 36U, 40U, 44U, 48U, 52U, 56U, 60U, 64U, 68U, 72U, 76U, 80U, 84U, 88U, 92U, 96U, 100U,
+	1U, 5U,  9U, 13U, 17U, 21U, 25U, 29U, 33U, 37U, 41U, 45U, 49U, 53U, 57U, 61U, 65U, 69U, 73U, 77U, 81U, 85U, 89U, 93U, 97U, 101U,
+	2U, 6U, 10U, 14U, 18U, 22U, 26U, 30U, 34U, 38U, 42U, 46U, 50U, 54U, 58U, 62U, 66U, 70U, 74U, 78U, 82U, 86U, 90U, 94U, 98U, 102U,
+	3U, 7U, 11U, 15U, 19U, 23U, 27U, 31U, 35U, 39U, 43U, 47U, 51U, 55U, 59U, 63U, 67U, 71U, 75U, 79U, 83U, 87U, 91U, 95U, 99U, 103U};
+
+const unsigned char WHITENING_DATA[] = {0x93U, 0xD7U, 0x51U, 0x21U, 0x9CU, 0x2FU, 0x6CU, 0xD0U, 0xEFU, 0x0FU,
+										0xF8U, 0x3DU, 0xF1U, 0x73U, 0x20U, 0x94U, 0xEDU, 0x1EU, 0x7CU, 0xD8U};
+
 const unsigned int IMBE_INTERLEAVE[] = {
 	0,  7, 12, 19, 24, 31, 36, 43, 48, 55, 60, 67, 72, 79, 84, 91,  96, 103, 108, 115, 120, 127, 132, 139,
 	1,  6, 13, 18, 25, 30, 37, 42, 49, 54, 61, 66, 73, 78, 85, 90,  97, 102, 109, 114, 121, 126, 133, 138,
@@ -505,6 +517,9 @@ const unsigned char VOICE_1K[6][33] = {
 	 0xFEU, 0x83U, 0xA1U, 0x10U, 0x00U, 0x00U, 0x00U, 0x0EU, 0x2CU, 0xC4U, 0x58U, 
 	 0x20U, 0x0AU, 0xCEU, 0xA8U, 0xFEU, 0x83U, 0xACU, 0xC4U, 0x58U, 0x20U, 0x0AU}};
 
+const unsigned int YSF_SYNC_LENGTH_BYTES = 5U;
+const unsigned int YSF_FICH_LENGTH_BYTES = 25U;
+
 const unsigned int NXDN_FRAME_LENGTH_BYTES = 48U;
 const unsigned int NXDN_FSW_LICH_SACCH_LENGTH_BYTES = 12U;
 
@@ -539,6 +554,12 @@ void CBERCal::DSTARFEC(const unsigned char* buffer, const unsigned char m_tag)
 		return;
 	} else if (m_tag == 0x13U) {
 		::fprintf(stdout, "D-Star voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	} else if (m_tag == 0x12U) {
+		::fprintf(stdout, "D-Star transmission lost, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
 		m_errors = 0U;
 		m_bits = 0U;
 		m_frames = 0U;
@@ -691,7 +712,54 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 
 void CBERCal::YSFFEC(const unsigned char* buffer)
 {
+	buffer += YSF_SYNC_LENGTH_BYTES + YSF_FICH_LENGTH_BYTES;
 
+	unsigned int errors = 0U;
+	unsigned int offset = 40U; // DCH(0)
+
+	// We have a total of 5 VCH sections, iterate through each
+	for (unsigned int j = 0U; j < 5U; j++, offset += 144U) {
+		unsigned int errs = 0U;
+
+		unsigned char vch[13U];
+
+		// Deinterleave
+		for (unsigned int i = 0U; i < 104U; i++) {
+			unsigned int n = INTERLEAVE_TABLE_26_4[i];
+			bool s = READ_BIT(buffer, offset + n);
+			WRITE_BIT(vch, i, s);
+		}
+
+		// "Un-whiten" (descramble)
+		for (unsigned int i = 0U; i < 13U; i++)
+			vch[i] ^= WHITENING_DATA[i];
+
+		for (unsigned int i = 0U; i < 81U; i += 3) {
+			uint8_t vote = 0U;
+			vote += READ_BIT(vch, i + 0U) ? 1U : 0U;
+			vote += READ_BIT(vch, i + 1U) ? 1U : 0U;
+			vote += READ_BIT(vch, i + 2U) ? 1U : 0U;
+
+			switch (vote) {
+			case 1U:		// 1 0 0, or 0 1 0, or 0 0 1
+				errs++;
+				break;
+			case 2U:		// 1 1 0, or 0 1 1, or 1 0 1
+				errs++;
+				break;
+			default:	// 0U (0 0 0), or 3U (1 1 1), no errors
+				break;
+			}
+		}
+
+		errors += errs;
+	}
+	
+	m_bits += 135U;
+	m_errors += errors;
+	m_frames++;
+
+	::fprintf(stdout, "YSF, V/D Mode 2, Repetition FEC BER %% (errs): %.3f%% (%u/135)" EOL, float(errors) / 1.35F, errors);
 }
 
 void CBERCal::P25FEC(const unsigned char* buffer)

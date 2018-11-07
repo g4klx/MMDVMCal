@@ -742,7 +742,7 @@ bool CMMDVMCal::setYSFBER_FEC()
 	m_mode = STATE_YSF;
 	m_carrier = false;
 	m_duplex = false;
-	m_dstarEnabled = true;
+	m_dstarEnabled = false;
 	m_dmrEnabled = false;
 	m_ysfEnabled = true;
 	m_p25Enabled = false;
