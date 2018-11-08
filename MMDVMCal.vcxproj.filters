@@ -17,10 +17,19 @@
     <ClInclude Include="Console.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CRC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Golay24128.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MMDVMCal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NXDNLICH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NXDNDefines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SerialController.h">
@@ -41,6 +50,15 @@
     <ClInclude Include="P25Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="YSFConvolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="YSFDefines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="YSFFICH.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BERCal.cpp">
@@ -49,10 +67,16 @@
     <ClCompile Include="Console.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CRC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Golay24128.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MMDVMCal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NXDNLICH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SerialController.cpp">
@@ -68,6 +92,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="P25Utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="YSFConvolution.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="YSFFICH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

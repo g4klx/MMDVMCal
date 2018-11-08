@@ -30,7 +30,7 @@ public:
 	void DMR1K(const unsigned char *buffer, const unsigned char m_seq);
 	void YSFFEC(const unsigned char* buffer);
 	void P25FEC(const unsigned char* buffer);
-	void NXDNFEC(const unsigned char* buffer);
+	void NXDNFEC(const unsigned char* buffer, const unsigned char m_tag);
 
 private:
 	unsigned int m_errors;

@@ -5,11 +5,14 @@ CXX = g++
 
 CXXFLAGS = -O2 -Wall
 
-MMDVMCal:	BERCal.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o
-		$(LD) $(LDFLAGS) -o MMDVMCal BERCal.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o SerialController.o SerialPort.o Console.o Utils.o $(LIBS)
+MMDVMCal:	BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
+		$(LD) $(LDFLAGS) -o MMDVMCal BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
 
 BERCal.o:	BERCal.cpp BERCal.h Golay24128.h Utils.h
 		$(CXX) $(CXXFLAGS) -c BERCal.cpp
+
+CRC.o:	CRC.cpp CRC.h
+		$(CXX) $(CXXFLAGS) -c CRC.cpp
 
 Hamming.o:	Hamming.cpp Hamming.h
 		$(CXX) $(CXXFLAGS) -c Hamming.cpp
@@ -23,6 +26,9 @@ P25Utils.o:	P25Utils.cpp P25Utils.h
 MMDVMCal.o:	MMDVMCal.cpp MMDVMCal.h SerialController.h Console.h Utils.h
 		$(CXX) $(CXXFLAGS) -c MMDVMCal.cpp
 
+NXDNLICH.o:	NXDNLICH.cpp NXDNLICH.h NXDNDefines.h
+		$(CXX) $(CXXFLAGS) -c NXDNLICH.cpp
+
 SerialController.o:	SerialController.cpp SerialController.h
 		$(CXX) $(CXXFLAGS) -c SerialController.cpp
 	
@@ -34,6 +40,12 @@ Console.o:	Console.cpp Console.h
 
 Utils.o:	Utils.cpp Utils.h
 		$(CXX) $(CXXFLAGS) -c Utils.cpp
+
+YSFConvolution.o:	YSFConvolution.cpp YSFConvolution.h
+		$(CXX) $(CXXFLAGS) -c YSFConvolution.cpp
+
+YSFFICH:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.h
+		$(CXX) $(CXXFLAGS) -c YSFFICH.cpp
 
 clean:
 		rm -f *.o *.bak *~ MMDVMCal

@@ -23,6 +23,10 @@
 #include "Hamming.h"
 #include "Golay24128.h"
 #include "P25Utils.h"
+#include "NXDNDefines.h"
+#include "NXDNLICH.h"
+#include "YSFDefines.h"
+#include "YSFFICH.h"
 #include "Utils.h"
 
 #include <cstdio>
@@ -517,12 +521,6 @@ const unsigned char VOICE_1K[6][33] = {
 	 0xFEU, 0x83U, 0xA1U, 0x10U, 0x00U, 0x00U, 0x00U, 0x0EU, 0x2CU, 0xC4U, 0x58U, 
 	 0x20U, 0x0AU, 0xCEU, 0xA8U, 0xFEU, 0x83U, 0xACU, 0xC4U, 0x58U, 0x20U, 0x0AU}};
 
-const unsigned int YSF_SYNC_LENGTH_BYTES = 5U;
-const unsigned int YSF_FICH_LENGTH_BYTES = 25U;
-
-const unsigned int NXDN_FRAME_LENGTH_BYTES = 48U;
-const unsigned int NXDN_FSW_LICH_SACCH_LENGTH_BYTES = 12U;
-
 const unsigned char NXDN_SCRAMBLER[] = {
 	0x00U, 0x00U, 0x00U, 0x82U, 0xA0U, 0x88U, 0x8AU, 0x00U, 0xA2U, 0xA8U, 0x82U, 0x8AU, 0x82U, 0x02U,
 	0x20U, 0x08U, 0x8AU, 0x20U, 0xAAU, 0xA2U, 0x82U, 0x08U, 0x22U, 0x8AU, 0xAAU, 0x08U, 0x28U, 0x88U,
@@ -712,54 +710,76 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 
 void CBERCal::YSFFEC(const unsigned char* buffer)
 {
-	buffer += YSF_SYNC_LENGTH_BYTES + YSF_FICH_LENGTH_BYTES;
+	CYSFFICH fich;
+	bool valid = fich.decode(buffer);
 
-	unsigned int errors = 0U;
-	unsigned int offset = 40U; // DCH(0)
+	if (valid) {
+		unsigned char fi = fich.getFI();
+		unsigned char dt = fich.getDT();
 
-	// We have a total of 5 VCH sections, iterate through each
-	for (unsigned int j = 0U; j < 5U; j++, offset += 144U) {
-		unsigned int errs = 0U;
+		if (fi == YSF_FI_HEADER) {
+			::fprintf(stdout, "YSF voice header received" EOL);
+			m_errors = 0U;
+			m_bits = 0U;
+			m_frames = 0U;
+			return;
+		} else if (fi == YSF_FI_TERMINATOR) {
+			::fprintf(stdout, "YSF voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			m_errors = 0U;
+			m_bits = 0U;
+			m_frames = 0U;
+			return;
+		} else if (fi == YSF_FI_COMMUNICATIONS && dt == YSF_DT_VD_MODE2) {
+			buffer += YSF_SYNC_LENGTH_BYTES + YSF_FICH_LENGTH_BYTES;
 
-		unsigned char vch[13U];
+			unsigned int errors = 0U;
+			unsigned int offset = 40U; // DCH(0)
 
-		// Deinterleave
-		for (unsigned int i = 0U; i < 104U; i++) {
-			unsigned int n = INTERLEAVE_TABLE_26_4[i];
-			bool s = READ_BIT(buffer, offset + n);
-			WRITE_BIT(vch, i, s);
-		}
+			// We have a total of 5 VCH sections, iterate through each
+			for (unsigned int j = 0U; j < 5U; j++, offset += 144U) {
+				unsigned int errs = 0U;
 
-		// "Un-whiten" (descramble)
-		for (unsigned int i = 0U; i < 13U; i++)
-			vch[i] ^= WHITENING_DATA[i];
+				unsigned char vch[13U];
 
-		for (unsigned int i = 0U; i < 81U; i += 3) {
-			uint8_t vote = 0U;
-			vote += READ_BIT(vch, i + 0U) ? 1U : 0U;
-			vote += READ_BIT(vch, i + 1U) ? 1U : 0U;
-			vote += READ_BIT(vch, i + 2U) ? 1U : 0U;
+				// Deinterleave
+				for (unsigned int i = 0U; i < 104U; i++) {
+					unsigned int n = INTERLEAVE_TABLE_26_4[i];
+					bool s = READ_BIT(buffer, offset + n);
+					WRITE_BIT(vch, i, s);
+				}
 
-			switch (vote) {
-			case 1U:		// 1 0 0, or 0 1 0, or 0 0 1
-				errs++;
-				break;
-			case 2U:		// 1 1 0, or 0 1 1, or 1 0 1
-				errs++;
-				break;
-			default:	// 0U (0 0 0), or 3U (1 1 1), no errors
-				break;
+				// "Un-whiten" (descramble)
+				for (unsigned int i = 0U; i < 13U; i++)
+					vch[i] ^= WHITENING_DATA[i];
+
+				for (unsigned int i = 0U; i < 81U; i += 3) {
+					unsigned char vote = 0U;
+					vote += READ_BIT(vch, i + 0U) ? 1U : 0U;
+					vote += READ_BIT(vch, i + 1U) ? 1U : 0U;
+					vote += READ_BIT(vch, i + 2U) ? 1U : 0U;
+
+					switch (vote) {
+					case 1U:		// 1 0 0, or 0 1 0, or 0 0 1
+						errs++;
+						break;
+					case 2U:		// 1 1 0, or 0 1 1, or 1 0 1
+						errs++;
+						break;
+					default:	// 0U (0 0 0), or 3U (1 1 1), no errors
+						break;
+					}
+				}
+
+				errors += errs;
 			}
-		}
-
-		errors += errs;
-	}
 	
-	m_bits += 135U;
-	m_errors += errors;
-	m_frames++;
+			m_bits += 135U;
+			m_errors += errors;
+			m_frames++;
 
-	::fprintf(stdout, "YSF, V/D Mode 2, Repetition FEC BER %% (errs): %.3f%% (%u/135)" EOL, float(errors) / 1.35F, errors);
+			::fprintf(stdout, "YSF, V/D Mode 2, Repetition FEC BER %% (errs): %.3f%% (%u/135)" EOL, float(errors) / 1.35F, errors);
+		}
+	}
 }
 
 void CBERCal::P25FEC(const unsigned char* buffer)
@@ -859,7 +879,7 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 	}
 }
 
-void CBERCal::NXDNFEC(const unsigned char* buffer)
+void CBERCal::NXDNFEC(const unsigned char* buffer, const unsigned char m_tag)
 {
 	unsigned char data[NXDN_FRAME_LENGTH_BYTES];
 
@@ -867,17 +887,36 @@ void CBERCal::NXDNFEC(const unsigned char* buffer)
 
 	NXDNScrambler(data);
 
-	unsigned int errors = 0U;
-	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
-	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
-	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
-	errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+	CNXDNLICH lich;
+	bool valid = lich.decode(data);
 
-	m_bits += 188U;
-	m_errors += errors;
-	m_frames++;
+	if (valid && m_tag) {
+		unsigned char usc = lich.getFCT();
+		unsigned char opt = lich.getOption();
 
-	::fprintf(stdout, "NXDN audio FEC BER %% (errs): %.3f%% (%u/188)" EOL, float(errors) / 1.88F, errors);
+		if (usc == NXDN_LICH_USC_SACCH_NS) {
+			if (m_frames == 0U)
+				::fprintf(stdout, "NXDN voice header received" EOL);
+			else
+				::fprintf(stdout, "NXDN voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			m_errors = 0U;
+			m_bits = 0U;
+			m_frames = 0U;
+			return;
+		} else if (opt == NXDN_LICH_STEAL_NONE) {
+			unsigned int errors = 0U;
+			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
+			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
+			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 18U);
+			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 27U);
+
+			m_bits += 188U;
+			m_errors += errors;
+			m_frames++;
+
+			::fprintf(stdout, "NXDN audio FEC BER %% (errs): %.3f%% (%u/188)" EOL, float(errors) / 1.88F, errors);
+		}
+	}
 }
 
 void CBERCal::NXDNScrambler(unsigned char* data)

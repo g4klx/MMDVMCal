@@ -144,25 +144,35 @@
   <ItemGroup>
     <ClInclude Include="BERCal.h" />
     <ClInclude Include="Console.h" />
+    <ClInclude Include="CRC.h" />
     <ClInclude Include="Golay24128.h" />
     <ClInclude Include="Hamming.h" />
     <ClInclude Include="MMDVMCal.h" />
+    <ClInclude Include="NXDNDefines.h" />
+    <ClInclude Include="NXDNLICH.h" />
     <ClInclude Include="P25Utils.h" />
     <ClInclude Include="SerialController.h" />
     <ClInclude Include="SerialPort.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="Version.h" />
+    <ClInclude Include="YSFConvolution.h" />
+    <ClInclude Include="YSFDefines.h" />
+    <ClInclude Include="YSFFICH.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BERCal.cpp" />
     <ClCompile Include="Console.cpp" />
+    <ClCompile Include="CRC.cpp" />
     <ClCompile Include="Golay24128.cpp" />
     <ClCompile Include="Hamming.cpp" />
     <ClCompile Include="MMDVMCal.cpp" />
+    <ClCompile Include="NXDNLICH.cpp" />
     <ClCompile Include="P25Utils.cpp" />
     <ClCompile Include="SerialController.cpp" />
     <ClCompile Include="SerialPort.cpp" />
     <ClCompile Include="Utils.cpp" />
+    <ClCompile Include="YSFConvolution.cpp" />
+    <ClCompile Include="YSFFICH.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

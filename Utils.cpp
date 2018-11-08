@@ -64,3 +64,17 @@ void CUtils::dump(const std::string& title, const unsigned char* data, unsigned 
 			length = 0U;
 	}
 }
+
+void CUtils::bitsToByteBE(const bool* bits, unsigned char& byte)
+{
+	assert(bits != NULL);
+
+	byte  = bits[0U] ? 0x80U : 0x00U;
+	byte |= bits[1U] ? 0x40U : 0x00U;
+	byte |= bits[2U] ? 0x20U : 0x00U;
+	byte |= bits[3U] ? 0x10U : 0x00U;
+	byte |= bits[4U] ? 0x08U : 0x00U;
+	byte |= bits[5U] ? 0x04U : 0x00U;
+	byte |= bits[6U] ? 0x02U : 0x00U;
+	byte |= bits[7U] ? 0x01U : 0x00U;
+}
