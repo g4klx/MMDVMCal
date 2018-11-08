@@ -3,7 +3,7 @@ all:	MMDVMCal
 LD  = g++
 CXX = g++
 
-CXXFLAGS = -O2 -Wall
+CXXFLAGS = -O2 -Wall -std=c++0x
 
 MMDVMCal:	BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
 		$(LD) $(LDFLAGS) -o MMDVMCal BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
