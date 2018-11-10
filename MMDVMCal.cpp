@@ -252,6 +252,7 @@ void CMMDVMCal::loop_MMDVM()
 		if (resp == RTM_OK)
 			displayModem(m_buffer, m_length);
 
+		m_ber.clock();
 		sleep(5U);
 	}
 }
@@ -397,6 +398,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 		if (resp == RTM_OK)
 			displayModem(m_buffer, m_length);
 
+		m_ber.clock();
 		sleep(5U);
 	}
 }

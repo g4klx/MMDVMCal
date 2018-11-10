@@ -530,7 +530,9 @@ const unsigned char NXDN_SCRAMBLER[] = {
 CBERCal::CBERCal():
 m_errors(0U),
 m_bits(0U),
-m_frames(0U)
+m_frames(0U),
+m_timeout(300U),
+m_timer(0U)
 {
 }
 
@@ -546,25 +548,22 @@ void CBERCal::DSTARFEC(const unsigned char* buffer, const unsigned char m_tag)
 
 	if (m_tag == 0x10U) {
 		::fprintf(stdout, "D-Star voice header received" EOL);
+		timerStart();
 		m_errors = 0U;
 		m_bits = 0U;
 		m_frames = 0U;
 		return;
 	} else if (m_tag == 0x13U) {
 		::fprintf(stdout, "D-Star voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
-		m_errors = 0U;
-		m_bits = 0U;
-		m_frames = 0U;
-		return;
-	} else if (m_tag == 0x12U) {
-		::fprintf(stdout, "D-Star transmission lost, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		timerStop();
 		m_errors = 0U;
 		m_bits = 0U;
 		m_frames = 0U;
 		return;
 	} else if (m_tag == 0x11U) {
-			unsigned int MASK = 0x800000U;
-			for (unsigned int i = 0U; i < 24U; i++) {
+		timerStart();
+		unsigned int MASK = 0x800000U;
+		for (unsigned int i = 0U; i < 24U; i++) {
 			if (READ_BIT(buffer, DSTAR_A_TABLE[i]))
 				a |= MASK;
 			if (READ_BIT(buffer, DSTAR_B_TABLE[i]))
@@ -588,17 +587,21 @@ void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 {
 	if (m_seq == 65U) {
 		::fprintf(stdout, "DMR voice header received" EOL);
+		timerStart();
 		m_errors = 0U;
 		m_bits = 0U;
 		m_frames = 0U;
 		return;
 	} else if (m_seq == 66U) {
 		::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		timerStop();
 		m_errors = 0U;
 		m_bits = 0U;
 		m_frames = 0U;
 		return;
 	}
+
+	timerStart();
 
 	unsigned int a1 = 0U, a2 = 0U, a3 = 0U;
 	unsigned int MASK = 0x800000U;
@@ -673,7 +676,8 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 	if (m_seq == 65U) {
 		for (unsigned int i = 0U; i < 33U; i++)
 			errors += countErrs(buffer[i], VH_DMO1K[i]);
-		
+
+		timerStart();
 		m_errors += errors;
 		m_bits += 264;
 		m_frames++;
@@ -683,7 +687,8 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 	} else if (m_seq == 66U) {
 		for (unsigned int i = 0U; i < 33U; i++)
 			errors += countErrs(buffer[i], VT_DMO1K[i]);
-		
+
+		timerStop();
 		m_errors += errors;
 		m_bits += 264;
 		m_frames++;
@@ -694,6 +699,8 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 
 	if (dmr_seq > 5U)
 		dmr_seq = 5U;
+
+	timerStart();
 
 	for (unsigned int i = 0U; i < 33U; i++)
 		errors += countErrs(buffer[i], VOICE_1K[dmr_seq][i]);
@@ -719,18 +726,22 @@ void CBERCal::YSFFEC(const unsigned char* buffer)
 
 		if (fi == YSF_FI_HEADER) {
 			::fprintf(stdout, "YSF voice header received" EOL);
+			timerStart();
 			m_errors = 0U;
 			m_bits = 0U;
 			m_frames = 0U;
 			return;
 		} else if (fi == YSF_FI_TERMINATOR) {
 			::fprintf(stdout, "YSF voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			timerStop();
 			m_errors = 0U;
 			m_bits = 0U;
 			m_frames = 0U;
 			return;
 		} else if (fi == YSF_FI_COMMUNICATIONS && dt == YSF_DT_VD_MODE2) {
 			buffer += YSF_SYNC_LENGTH_BYTES + YSF_FICH_LENGTH_BYTES;
+
+			timerStart();
 
 			unsigned int errors = 0U;
 			unsigned int offset = 40U; // DCH(0)
@@ -793,6 +804,7 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 
 	if (duid == 0x00U) {
 		::fprintf(stdout, "P25 HDU received" EOL);
+		timerStart();
 		m_bits = 0U;
 		m_errors = 0U;
 		m_frames = 0U;
@@ -800,12 +812,15 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 	}
 	else if (duid == 0x03U) {
 		::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		timerStop();
 		m_bits = 0U;
 		m_errors = 0U;
 		m_frames = 0U;
 		return;
 	}
 	else if (duid == 0x05U) {
+		timerStart();
+
 		CP25Utils::decode(buffer, imbe, 114U, 262U);
 		errs += regenerateIMBE(imbe);
 
@@ -842,6 +857,8 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 		m_frames++;
 	}
 	else if (duid == 0x0AU) {
+		timerStart();
+
 		CP25Utils::decode(buffer, imbe, 114U, 262U);
 		errs += regenerateIMBE(imbe);
 
@@ -895,15 +912,24 @@ void CBERCal::NXDNFEC(const unsigned char* buffer, const unsigned char m_tag)
 		unsigned char opt = lich.getOption();
 
 		if (usc == NXDN_LICH_USC_SACCH_NS) {
-			if (m_frames == 0U)
+			if (m_frames == 0U) {
 				::fprintf(stdout, "NXDN voice header received" EOL);
-			else
+				timerStart();
+				m_errors = 0U;
+				m_bits = 0U;
+				m_frames = 0U;
+				return;
+			} else {
 				::fprintf(stdout, "NXDN voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
-			m_errors = 0U;
-			m_bits = 0U;
-			m_frames = 0U;
-			return;
+				timerStop();
+				m_errors = 0U;
+				m_bits = 0U;
+				m_frames = 0U;
+				return;
+			}
 		} else if (opt == NXDN_LICH_STEAL_NONE) {
+			timerStart();
+
 			unsigned int errors = 0U;
 			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 0U);
 			errors += regenerateYSFDN(data + NXDN_FSW_LICH_SACCH_LENGTH_BYTES + 9U);
@@ -1154,6 +1180,32 @@ unsigned int CBERCal::regenerateYSFDN(unsigned char* bytes)
 	}
 
 	return regenerateDMR(a, b, c);
+}
+
+void CBERCal::clock()
+{
+	if (m_timer > 0U && m_timeout > 0U) {
+		m_timer += 1U;
+		
+		if (m_timer >= m_timeout) {
+			::fprintf(stdout, "Transmission lost, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			m_errors = 0U;
+			m_bits = 0U;
+			m_frames = 0U;
+			timerStop();
+		}
+	}
+}
+
+void CBERCal::timerStart()
+{
+	if (m_timeout > 0U)
+		m_timer = 1U;
+}
+
+void CBERCal::timerStop()
+{
+	m_timer = 0U;
 }
 
 unsigned char CBERCal::countErrs(unsigned char a, unsigned char b)

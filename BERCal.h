@@ -32,10 +32,15 @@ public:
 	void P25FEC(const unsigned char* buffer);
 	void NXDNFEC(const unsigned char* buffer, const unsigned char m_tag);
 
+	void clock();
+
 private:
 	unsigned int m_errors;
 	unsigned int m_bits;
 	unsigned int m_frames;
+
+	unsigned int m_timeout;
+	unsigned int m_timer;
 
 	void NXDNScrambler(unsigned char* data);
 	unsigned int regenerateDStar(unsigned int& a, unsigned int& b);
@@ -44,6 +49,9 @@ private:
 	unsigned int regenerateYSFDN(unsigned char* bytes);
 
 	unsigned char countErrs(unsigned char a, unsigned char b);
+
+	void timerStart();
+	void timerStop();
 };
 
 #endif
