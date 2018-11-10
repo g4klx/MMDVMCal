@@ -70,6 +70,7 @@ m_rxInvert(false),
 m_pttInvert(false),
 m_frequency(433000000U),
 m_startfrequency(433000000U),
+m_step(50U),
 m_power(100.0F),
 m_mode(STATE_DSTARCAL),
 m_duplex(true),
@@ -333,6 +334,12 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'f':
 				setFreq(-1);
 				break;
+			case 'Z':
+				setStepFreq(1);
+				break;
+			case 'z':
+				setStepFreq(-1);
+				break;
 			case 'P':
 				setPower(1);
 				break;
@@ -412,6 +419,8 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    E/e      Enter frequency (current: %u Hz)" EOL, m_frequency);
 	::fprintf(stdout, "    F        Increase frequency" EOL);
 	::fprintf(stdout, "    f        Decrease frequency" EOL);
+	::fprintf(stdout, "    Z        Increase frequency step" EOL);
+	::fprintf(stdout, "    z        Decrease frequency step" EOL);
 	::fprintf(stdout, "    T        Increase deviation" EOL);
 	::fprintf(stdout, "    t        Decrease deviation" EOL);
 	::fprintf(stdout, "    P        Increase RF power" EOL);
@@ -921,7 +930,7 @@ bool CMMDVMCal::setFreq(int incr)
 	bool ret;
 
 	if (incr > 0) {
-		m_frequency += 50;
+		m_frequency += m_step;
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
 		if (m_carrier)
@@ -932,7 +941,7 @@ bool CMMDVMCal::setFreq(int incr)
 	}
 
 	if (incr < 0) {
-		m_frequency -= 50;
+		m_frequency -= m_step;
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
 		if (m_carrier)
@@ -940,6 +949,21 @@ bool CMMDVMCal::setFreq(int incr)
 		else
 			ret = writeConfig(m_txLevel, m_debug);
 		return ret;
+	}
+
+	return true;
+}
+
+bool CMMDVMCal::setStepFreq(int incr)
+{
+	if (incr > 0 && m_step < 500U) {
+		m_step += 10U;
+		::fprintf(stdout, "Frequency step: %u" EOL, m_step);
+	}
+	
+	if (incr < 0 && m_step > 10U) {
+		m_step -= 10U;
+		::fprintf(stdout, "Frequency step: %u" EOL, m_step);
 	}
 
 	return true;

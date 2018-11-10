@@ -80,6 +80,7 @@ private:
 	bool              m_pttInvert;
 	unsigned int      m_frequency;
 	unsigned int      m_startfrequency;
+	unsigned int      m_step;
 	float             m_power;
 	MMDVM_STATE       m_mode;
 	bool              m_duplex;
@@ -109,6 +110,7 @@ private:
 	bool setPTTInvert();
 	bool setDebug();
 	bool setFreq(int incr);
+	bool setStepFreq(int incr);
 	bool setPower(int incr);
 	bool setCarrier();
 	bool setEnterFreq();
