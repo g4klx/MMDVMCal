@@ -49,8 +49,7 @@ the following commands:
 <tr><td>E/e</td><td>Enter frequency</td><tr>
 <tr><td>F</td><td>Increase frequency</td></tr>
 <tr><td>f</td><td>Decrease frequency</td></tr>
-<tr><td>Z</td><td>Increase frequency step</td></tr>
-<tr><td>z</td><td>Decrease frequency step</td></tr>
+<tr><td>Z/z</td><td>Enter frequency step</td></tr>
 <tr><td>T</td><td>Increase deviation</td></tr>
 <tr><td>t</td><td>Decrease deviation</td></tr>
 <tr><td>P</td><td>Increase RF power</td></tr>

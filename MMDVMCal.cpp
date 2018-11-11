@@ -335,11 +335,8 @@ void CMMDVMCal::loop_MMDVM_HS()
 				setFreq(-1);
 				break;
 			case 'Z':
-				setStepFreq(1);
-				break;
 			case 'z':
-				setStepFreq(-1);
-				break;
+				setStepFreq();
 			case 'P':
 				setPower(1);
 				break;
@@ -419,8 +416,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    E/e      Enter frequency (current: %u Hz)" EOL, m_frequency);
 	::fprintf(stdout, "    F        Increase frequency" EOL);
 	::fprintf(stdout, "    f        Decrease frequency" EOL);
-	::fprintf(stdout, "    Z        Increase frequency step" EOL);
-	::fprintf(stdout, "    z        Decrease frequency step" EOL);
+	::fprintf(stdout, "    Z/z      Enter frequency step" EOL);
 	::fprintf(stdout, "    T        Increase deviation" EOL);
 	::fprintf(stdout, "    t        Decrease deviation" EOL);
 	::fprintf(stdout, "    P        Increase RF power" EOL);
@@ -954,17 +950,29 @@ bool CMMDVMCal::setFreq(int incr)
 	return true;
 }
 
-bool CMMDVMCal::setStepFreq(int incr)
+bool CMMDVMCal::setStepFreq()
 {
-	if (incr > 0 && m_step < 500U) {
-		m_step += 10U;
-		::fprintf(stdout, "Frequency step: %u" EOL, m_step);
-	}
+	char buff[256U];
+
+	::fprintf(stdout, "Enter frequency step (current %u Hz):" EOL, m_step);
+
+	m_console.close();
+
+	if (std::fgets(buff, 256, stdin) != NULL ) {
+
+		unsigned long int freq = std::strtoul(buff, NULL, 10);
 	
-	if (incr < 0 && m_step > 10U) {
-		m_step -= 10U;
-		::fprintf(stdout, "Frequency step: %u" EOL, m_step);
+		if (freq >= 10U && freq <= 25000U) {
+			m_step = (unsigned int)freq;
+			::fprintf(stdout, "New frequency step: %u Hz" EOL, m_step);
+		}
+		else
+			::fprintf(stdout, "Not valid frequency step" EOL);
 	}
+
+	m_console.open();
+
+	displayHelp_MMDVM_HS();
 
 	return true;
 }

@@ -110,7 +110,7 @@ private:
 	bool setPTTInvert();
 	bool setDebug();
 	bool setFreq(int incr);
-	bool setStepFreq(int incr);
+	bool setStepFreq();
 	bool setPower(int incr);
 	bool setCarrier();
 	bool setEnterFreq();
