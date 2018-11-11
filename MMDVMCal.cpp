@@ -337,6 +337,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'Z':
 			case 'z':
 				setStepFreq();
+				break;
 			case 'P':
 				setPower(1);
 				break;
