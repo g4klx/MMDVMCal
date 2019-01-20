@@ -784,11 +784,11 @@ void CBERCal::YSFFEC(const unsigned char* buffer)
 				errors += errs;
 			}
 	
-			m_bits += 135U;
+			m_bits += 405U;
 			m_errors += errors;
 			m_frames++;
 
-			::fprintf(stdout, "YSF, V/D Mode 2, Repetition FEC BER %% (errs): %.3f%% (%u/135)" EOL, float(errors) / 1.35F, errors);
+			::fprintf(stdout, "YSF, V/D Mode 2, Repetition FEC BER %% (errs): %.3f%% (%u/405)" EOL, float(errors) / 4.05F, errors);
 		}
 	}
 }
