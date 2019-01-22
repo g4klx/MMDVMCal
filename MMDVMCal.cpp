@@ -83,7 +83,8 @@ m_dmrEnabled(false),
 m_dmrBERFEC(true),
 m_ysfEnabled(false),
 m_p25Enabled(false),
-m_nxdnEnabled(false)
+m_nxdnEnabled(false),
+m_pocsagEnabled(false)
 {
 	m_buffer = new unsigned char[BUFFER_LENGTH];
 }
@@ -236,6 +237,9 @@ void CMMDVMCal::loop_MMDVM()
 			case 'N':
 				setNXDNCal1K();
 				break;
+			case 'g':
+				setPOCSAGCal();
+				break;
 			case 'S':
 			case 's':
 				setRSSI();
@@ -288,6 +292,7 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    J        BER Test Mode (FEC) for YSF" EOL);
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
+	::fprintf(stdout, "    g        POCSAG 600Hz Test Pattern" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
@@ -431,6 +436,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    J        BER Test Mode (FEC) for YSF" EOL);
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
+	::fprintf(stdout, "    g        POCSAG 600Hz Test Pattern" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    I/i      Interrupt Counter Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
@@ -513,6 +519,8 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 		buffer[4U] |= 0x08U;
 	if (m_nxdnEnabled)
 		buffer[4U] |= 0x10U;
+	if (m_pocsagEnabled)
+		buffer[4U] |= 0x20U;
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
 	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
@@ -603,6 +611,7 @@ bool CMMDVMCal::setDMRDeviation()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
@@ -619,6 +628,7 @@ bool CMMDVMCal::setLowFrequencyCal()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
@@ -635,6 +645,7 @@ bool CMMDVMCal::setDMRCal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
@@ -656,6 +667,7 @@ bool CMMDVMCal::setDMRDMO1K()
 		m_ysfEnabled = false;
 		m_p25Enabled = false;
 		m_nxdnEnabled = false;
+		m_pocsagEnabled = false;
 
 		::fprintf(stdout, "DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
@@ -673,6 +685,7 @@ bool CMMDVMCal::setP25Cal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
@@ -689,8 +702,26 @@ bool CMMDVMCal::setNXDNCal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
+
+	return writeConfig(m_txLevel, m_debug);
+}
+
+bool CMMDVMCal::setPOCSAGCal()
+{
+	m_mode = STATE_POCSAGCAL;
+	m_carrier = false;
+	m_duplex = false;
+	m_dstarEnabled = false;
+	m_dmrEnabled = false;
+	m_ysfEnabled = false;
+	m_p25Enabled = false;
+	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
+
+	::fprintf(stdout, "POCSAG 600 Hz Test Pattern" EOL);
 
 	return writeConfig(m_txLevel, m_debug);
 }
@@ -705,6 +736,7 @@ bool CMMDVMCal::setDSTARBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for D-Star" EOL);
 
@@ -722,6 +754,7 @@ bool CMMDVMCal::setDMRBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
@@ -739,6 +772,7 @@ bool CMMDVMCal::setDMRBER_1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (1031 Hz Test Pattern) for DMR Simplex" EOL);
 
@@ -755,6 +789,7 @@ bool CMMDVMCal::setYSFBER_FEC()
 	m_ysfEnabled = true;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for YSF" EOL);
 
@@ -771,6 +806,7 @@ bool CMMDVMCal::setP25BER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = true;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for P25" EOL);
 
@@ -787,6 +823,7 @@ bool CMMDVMCal::setNXDNBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = true;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for NXDN" EOL);
 
@@ -803,6 +840,7 @@ bool CMMDVMCal::setDSTAR()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
@@ -819,6 +857,7 @@ bool CMMDVMCal::setRSSI()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
@@ -835,6 +874,7 @@ bool CMMDVMCal::setIntCal()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "Interrupt Counter Mode" EOL);
 
@@ -851,6 +891,7 @@ bool CMMDVMCal::setCarrier()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
 
 	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
 

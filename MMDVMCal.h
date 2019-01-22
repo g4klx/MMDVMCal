@@ -55,7 +55,8 @@ enum MMDVM_STATE {
   STATE_RSSICAL   = 96,
   STATE_DMRCAL    = 98,
   STATE_DSTARCAL  = 99,
-  STATE_INTCAL    = 100
+  STATE_INTCAL    = 100,
+  STATE_POCSAGCAL = 101
 };
 
 class CMMDVMCal {
@@ -95,6 +96,7 @@ private:
 	bool              m_ysfEnabled;
 	bool              m_p25Enabled;
 	bool              m_nxdnEnabled;
+	bool              m_pocsagEnabled;
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
@@ -120,6 +122,7 @@ private:
 	bool setDMRDMO1K();
 	bool setP25Cal1K();
 	bool setNXDNCal1K();
+	bool setPOCSAGCal();
 	bool setDSTARBER_FEC();
 	bool setDMRBER_FEC();
 	bool setDMRBER_1K();
