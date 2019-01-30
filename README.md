@@ -34,6 +34,7 @@ the following commands:
 <tr><td>J</td><td>BER Test Mode (FEC) for YSF</td></tr>
 <tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
+<tr><td>g</td><td>POCSAG 600Hz Test Pattern</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
 <tr><td>&lt;space&gt;</td><td>Toggle transmit</td></tr>
@@ -63,6 +64,7 @@ the following commands:
 <tr><td>J</td><td>BER Test Mode (FEC) for YSF</td></tr>
 <tr><td>j</td><td>BER Test Mode (FEC) for P25</td></tr>
 <tr><td>n</td><td>BER Test Mode (FEC) for NXDN</td></tr>
+<tr><td>g</td><td>POCSAG 600Hz Test Pattern</td></tr>
 <tr><td>S/s</td><td>RSSI Mode</td></tr>
 <tr><td>I/i</td><td>Interrupt Counter Mode</td></tr>
 <tr><td>V/v</td><td>Display version of MMDVMCal</td></tr>
