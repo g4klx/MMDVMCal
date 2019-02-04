@@ -387,6 +387,9 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'n':
 				setNXDNBER_FEC();
 				break;
+			case 'g':
+				setPOCSAGCal();
+				break;
 			case 'S':
 			case 's':
 				setRSSI();
