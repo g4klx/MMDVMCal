@@ -1,7 +1,7 @@
 all:	MMDVMCal
 
-LD  = g++
-CXX = g++
+LD  = c++
+CXX = c++
 
 CXXFLAGS = -O2 -Wall -std=c++0x
 
@@ -31,7 +31,7 @@ NXDNLICH.o:	NXDNLICH.cpp NXDNLICH.h NXDNDefines.h
 
 SerialController.o:	SerialController.cpp SerialController.h
 		$(CXX) $(CXXFLAGS) -c SerialController.cpp
-	
+
 SerialPort.o:	SerialPort.cpp SerialPort.h
 		$(CXX) $(CXXFLAGS) -c SerialPort.cpp
 
