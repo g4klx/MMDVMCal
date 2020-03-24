@@ -34,7 +34,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <termios.h>
-#if !defined(__APPLE__)
+#if defined(__linux__)
 #include <linux/i2c-dev.h>
 #endif
 #endif
@@ -247,7 +247,7 @@ bool CSerialController::open()
 	assert(m_fd == -1);
 
 	if (m_device == "/dev/i2c-1") {
-#if !defined(__APPLE__)
+#if defined(__linux__)
 		m_fd = ::open(m_device.c_str(), O_RDWR);
 		if (m_fd < 0) {
 			::fprintf(stderr, "Cannot open device - %s", m_device.c_str());
@@ -412,7 +412,7 @@ int CSerialController::read(unsigned char* buffer, unsigned int length)
 
 	while (offset < length) {
 		if (m_device == "/dev/i2c-1"){
-#if !defined(__APPLE__)
+#if defined(__linux__)
 			ssize_t c = ::read(m_fd, buffer + offset, 1U);
 			if (c < 0) {
 				if (errno != EAGAIN) {
@@ -494,7 +494,7 @@ int CSerialController::write(const unsigned char* buffer, unsigned int length)
 	while (ptr < length) {
 		ssize_t n = 0U;
 		if (m_device == "/dev/i2c-1"){
-#if !defined(__APPLE__)
+#if defined(__linux__)
 			n = ::write(m_fd, buffer + ptr, 1U);
 #endif
 		} else {
