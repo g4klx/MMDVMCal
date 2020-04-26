@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2018,2019 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2018,2019,2020 by Jonathan Naylor G4KLX
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
@@ -19,6 +19,6 @@
 #if !defined(VERSION_H)
 #define	VERSION_H
 
-#define VERSION "MMDVMCal 20190130"
+#define VERSION "MMDVMCal 20200426"
 
 #endif

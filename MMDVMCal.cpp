@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016,2017,2018 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017,2018,2020 by Jonathan Naylor G4KLX
  *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
@@ -501,6 +501,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	buffer[0U] = MMDVM_FRAME_START;
 	buffer[1U] = 22U;
 	buffer[2U] = MMDVM_SET_CONFIG;
+
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
 		buffer[3U] |= 0x01U;
@@ -512,6 +513,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 		buffer[3U] |= 0x80U;
 	if (debug)
 		buffer[3U] |= 0x10U;
+
 	buffer[4U] = 0x00U;
 	if (m_dstarEnabled)
 		buffer[4U] |= 0x01U;
@@ -544,7 +546,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	buffer[18U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[19U] = 0U;
 	buffer[20U] = (unsigned char)(txlevel * 2.55F + 0.5F);
-        buffer[21U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[21U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 
 	int ret = m_serial.write(buffer, 22U);
 	if (ret <= 0)
