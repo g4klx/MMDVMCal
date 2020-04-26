@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016,2017 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017,2020 by Jonathan Naylor G4KLX
  *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
@@ -97,6 +97,7 @@ private:
 	bool              m_p25Enabled;
 	bool              m_nxdnEnabled;
 	bool              m_pocsagEnabled;
+	bool              m_fmEnabled;
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
