@@ -84,7 +84,8 @@ m_dmrBERFEC(true),
 m_ysfEnabled(false),
 m_p25Enabled(false),
 m_nxdnEnabled(false),
-m_pocsagEnabled(false)
+m_pocsagEnabled(false),
+m_fmEnabled(false)
 {
 	m_buffer = new unsigned char[BUFFER_LENGTH];
 }
@@ -498,7 +499,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	unsigned char buffer[50U];
 
 	buffer[0U] = MMDVM_FRAME_START;
-	buffer[1U] = 21U;
+	buffer[1U] = 22U;
 	buffer[2U] = MMDVM_SET_CONFIG;
 	buffer[3U] = 0x00U;
 	if (m_rxInvert)
@@ -524,6 +525,9 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 		buffer[4U] |= 0x10U;
 	if (m_pocsagEnabled)
 		buffer[4U] |= 0x20U;
+	if (m_fmEnabled)
+		buffer[4U] |= 0x40U;
+
 	buffer[5U] = 0U;
 	buffer[6U] = m_mode;
 	buffer[7U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
@@ -540,8 +544,9 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	buffer[18U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[19U] = 0U;
 	buffer[20U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+        buffer[21U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 
-	int ret = m_serial.write(buffer, 21U);
+	int ret = m_serial.write(buffer, 22U);
 	if (ret <= 0)
 		return false;
 

@@ -97,6 +97,7 @@ private:
 	bool              m_p25Enabled;
 	bool              m_nxdnEnabled;
 	bool              m_pocsagEnabled;
+        bool              m_fmEnabled;
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
