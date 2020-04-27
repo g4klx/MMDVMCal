@@ -196,6 +196,9 @@ void CMMDVMCal::loop_MMDVM()
 			case 'v':
 				::fprintf(stdout, VERSION EOL);
 				break;
+			case 'F':
+				setFMDeviation();
+				break;
 			case 'D':
 				setDMRDeviation();
 				break;
@@ -281,6 +284,7 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    T        Increase transmit level" EOL);
 	::fprintf(stdout, "    t        Decrease transmit level" EOL);
 	::fprintf(stdout, "    d        D-Star Mode" EOL);
+	::fprintf(stdout, "    F        FM Deviation Mode (Adjust for correct Deviation)" EOL);
 	::fprintf(stdout, "    D        DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    L/l      DMR Low Frequency Mode (80 Hz square wave)" EOL);
 	::fprintf(stdout, "    A        DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
@@ -432,6 +436,7 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    P        Increase RF power" EOL);
 	::fprintf(stdout, "    p        Decrease RF power" EOL);
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
+	::fprintf(stdout, "    K/k      Set FM Deviation Modes" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    K/k      BER Test Mode (FEC) for D-Star" EOL);
@@ -622,8 +627,51 @@ bool CMMDVMCal::setDMRDeviation()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
+
+	return writeConfig(m_txLevel, m_debug);
+}
+
+bool CMMDVMCal::setFMDeviation()
+{
+        switch (m_mode)
+        {
+          case STATE_FMCAL10K:
+            m_mode = STATE_FMCAL12K;
+   	    ::fprintf(stdout, "FM 12.5Khz channel spacing with 2.50Khz Deviation (1039.5hz)" EOL);
+            break;
+          case STATE_FMCAL12K:
+            m_mode = STATE_FMCAL15K;
+   	    ::fprintf(stdout, "FM 15Khz channel spacing with 3.0Khz Deviation (1247hz)" EOL);
+            break;
+          case STATE_FMCAL15K:
+            m_mode = STATE_FMCAL20K;
+   	    ::fprintf(stdout, "FM 20Khz channel spacing with 4.0Khz Deviation (1663hz)" EOL);
+            break;
+          case STATE_FMCAL20K:
+            m_mode = STATE_FMCAL25K;
+   	    ::fprintf(stdout, "FM 25Khz channel spacing with 5.0Khz Deviation (2079hz)" EOL);
+            break;
+          case STATE_FMCAL25K:
+            m_mode = STATE_FMCAL30K;
+   	    ::fprintf(stdout, "FM 30Khz channel spacing with 6.0Khz Deviation (2495hz)" EOL);
+            break;
+          default:
+            m_mode = STATE_FMCAL10K;
+   	    ::fprintf(stdout, "FM 10Khz channel spacing with 2.30Khz Deviation (956hz)" EOL);
+          break;
+        }
+	m_carrier = false;
+	m_duplex = true;
+	m_dstarEnabled = false;
+	m_dmrEnabled = false;
+	m_ysfEnabled = false;
+	m_p25Enabled = false;
+	m_nxdnEnabled = false;
+	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	return writeConfig(m_txLevel, m_debug);
 }
@@ -639,6 +687,7 @@ bool CMMDVMCal::setLowFrequencyCal()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
@@ -656,6 +705,7 @@ bool CMMDVMCal::setDMRCal1K()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
@@ -678,6 +728,7 @@ bool CMMDVMCal::setDMRDMO1K()
 		m_p25Enabled = false;
 		m_nxdnEnabled = false;
 		m_pocsagEnabled = false;
+                m_fmEnabled = false;
 
 		::fprintf(stdout, "DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
@@ -696,6 +747,7 @@ bool CMMDVMCal::setP25Cal1K()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
@@ -713,6 +765,7 @@ bool CMMDVMCal::setNXDNCal1K()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
@@ -730,6 +783,7 @@ bool CMMDVMCal::setPOCSAGCal()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "POCSAG 600 Hz Test Pattern" EOL);
 
@@ -747,6 +801,7 @@ bool CMMDVMCal::setDSTARBER_FEC()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for D-Star" EOL);
 
@@ -765,6 +820,7 @@ bool CMMDVMCal::setDMRBER_FEC()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
@@ -783,6 +839,7 @@ bool CMMDVMCal::setDMRBER_1K()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (1031 Hz Test Pattern) for DMR Simplex" EOL);
 
@@ -800,6 +857,7 @@ bool CMMDVMCal::setYSFBER_FEC()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for YSF" EOL);
 
@@ -817,6 +875,7 @@ bool CMMDVMCal::setP25BER_FEC()
 	m_p25Enabled = true;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for P25" EOL);
 
@@ -834,6 +893,7 @@ bool CMMDVMCal::setNXDNBER_FEC()
 	m_p25Enabled = false;
 	m_nxdnEnabled = true;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for NXDN" EOL);
 
@@ -851,6 +911,7 @@ bool CMMDVMCal::setDSTAR()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
@@ -868,6 +929,7 @@ bool CMMDVMCal::setRSSI()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
@@ -885,6 +947,7 @@ bool CMMDVMCal::setIntCal()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "Interrupt Counter Mode" EOL);
 
@@ -902,6 +965,7 @@ bool CMMDVMCal::setCarrier()
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
 	m_pocsagEnabled = false;
+        m_fmEnabled = false;
 
 	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
 
