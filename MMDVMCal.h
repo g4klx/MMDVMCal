@@ -56,7 +56,13 @@ enum MMDVM_STATE {
   STATE_DMRCAL    = 98,
   STATE_DSTARCAL  = 99,
   STATE_INTCAL    = 100,
-  STATE_POCSAGCAL = 101
+  STATE_POCSAGCAL = 101,
+  STATE_FMCAL10K  = 102,
+  STATE_FMCAL12K = 103,
+  STATE_FMCAL15K  = 104,
+  STATE_FMCAL20K  = 105,
+  STATE_FMCAL25K  = 106,
+  STATE_FMCAL30K  = 107
 };
 
 class CMMDVMCal {
@@ -117,6 +123,7 @@ private:
 	bool setPower(int incr);
 	bool setCarrier();
 	bool setEnterFreq();
+	bool setFMDeviation();
 	bool setDMRDeviation();
 	bool setLowFrequencyCal();
 	bool setDMRCal1K();
