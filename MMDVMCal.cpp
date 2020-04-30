@@ -142,13 +142,13 @@ void CMMDVMCal::loop_MMDVM()
 
 	unsigned int counter=0;
 	bool end = false;
-	while (!end) { 
+	while (!end) {
 		int c = m_console.getChar();
 		switch (c) {
 			case 'H':
 			case 'h':
 				displayHelp_MMDVM();
-	    			break;
+				break;
 			case 'W':
 			case 'w':
 				setDebug();
@@ -256,24 +256,23 @@ void CMMDVMCal::loop_MMDVM()
 			default:
 				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
 				break;
-	    }
+	    	}
 
-  	    RESP_TYPE_MMDVM resp = getResponse();
+  	    	RESP_TYPE_MMDVM resp = getResponse();
 
-	    if (resp == RTM_OK)
-	    	displayModem(m_buffer, m_length);
+		if (resp == RTM_OK)
+			displayModem(m_buffer, m_length);
 
-	    m_ber.clock();
-	    sleep(5U);
+		m_ber.clock();
+		sleep(5U);
 
-            if(counter >= 200)
-            {
-		if (getStatus())
-	    		displayModem(m_buffer, m_length);
-		counter=0;
-	    }
-            counter++; 
-
+	        if(counter >= 200)
+        	{
+			if (getStatus())
+		    		displayModem(m_buffer, m_length);
+			counter=0;
+		}
+		counter++;
 
 	}
 }
