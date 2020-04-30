@@ -58,7 +58,7 @@ enum MMDVM_STATE {
   STATE_INTCAL    = 100,
   STATE_POCSAGCAL = 101,
   STATE_FMCAL10K  = 102,
-  STATE_FMCAL12K = 103,
+  STATE_FMCAL12K  = 103,
   STATE_FMCAL15K  = 104,
   STATE_FMCAL20K  = 105,
   STATE_FMCAL25K  = 106,
@@ -146,6 +146,8 @@ private:
 	bool writeConfig(float txlevel, bool debug);
 	void sleep(unsigned int ms);
 	bool setFrequency();
+	bool getStatus();
+
 	RESP_TYPE_MMDVM getResponse();
 };
 
