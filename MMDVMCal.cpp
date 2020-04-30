@@ -32,6 +32,7 @@
 
 #include "Utils.h"
 
+const unsigned char MMDVM_GET_STATUS  = 0x01U;
 const unsigned char MMDVM_FRAME_START = 0xE0U;
 const unsigned char MMDVM_GET_VERSION = 0x00U;
 const unsigned char MMDVM_SET_CONFIG  = 0x02U;
@@ -139,6 +140,7 @@ void CMMDVMCal::loop_MMDVM()
 {
 	displayHelp_MMDVM();
 
+	unsigned int counter=0;
 	bool end = false;
 	while (!end) {
 		int c = m_console.getChar();
@@ -254,15 +256,24 @@ void CMMDVMCal::loop_MMDVM()
 			default:
 				::fprintf(stderr, "Unknown command - %c (H/h for help)" EOL, c);
 				break;
-		}
+	    	}
 
-		RESP_TYPE_MMDVM resp = getResponse();
+  	    	RESP_TYPE_MMDVM resp = getResponse();
 
 		if (resp == RTM_OK)
 			displayModem(m_buffer, m_length);
 
 		m_ber.clock();
 		sleep(5U);
+
+	        if(counter >= 200)
+        	{
+			if (getStatus())
+		    		displayModem(m_buffer, m_length);
+			counter=0;
+		}
+		counter++;
+
 	}
 }
 
@@ -306,7 +317,8 @@ void CMMDVMCal::displayHelp_MMDVM()
 void CMMDVMCal::loop_MMDVM_HS()
 {
 	m_mode = STATE_DMRCAL;
-	
+	unsigned int counter=0;
+
 	setFrequency();
 	writeConfig(m_txLevel, m_debug);
 
@@ -418,6 +430,14 @@ void CMMDVMCal::loop_MMDVM_HS()
 
 		m_ber.clock();
 		sleep(5U);
+
+                if(counter >= 200)
+                {
+		        if (getStatus())
+	    		    displayModem(m_buffer, m_length);
+		        counter=0;
+	        }
+                counter++; 
 	}
 }
 
@@ -498,6 +518,12 @@ bool CMMDVMCal::initModem()
 
 	return false;
 }
+
+
+
+
+
+
 
 bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 {
@@ -1191,7 +1217,20 @@ bool CMMDVMCal::setTransmit()
 
 void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 {
-	if (buffer[2U] == 0x08U) {
+	if (buffer[2U] == MMDVM_GET_STATUS) {
+		bool adcOverflow = (buffer[5U] & 0x02U) == 0x02U;
+                if (adcOverflow)
+                	::fprintf(stderr, "MMDVM ADC levels have overflowed" EOL);
+                bool rxOverflow = (buffer[5U] & 0x04U) == 0x04U;
+                if (rxOverflow)
+                        ::fprintf(stderr,"MMDVM RX buffer has overflowed" EOL);
+                bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
+                if (txOverflow)
+                        ::fprintf(stderr,"MMDVM TX buffer has overflowed" EOL);
+                bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
+                if (dacOverflow)
+                        ::fprintf(stderr,"MMDVM DAC levels have overflowed" EOL);
+	} else if (buffer[2U] == 0x08U) {
 		bool  inverted = (buffer[3U] == 0x80U);
 		short high = buffer[4U] << 8 | buffer[5U];
 		short low = buffer[6U] << 8 | buffer[7U];
@@ -1292,6 +1331,41 @@ bool CMMDVMCal::setFrequency()
 	return true;
 }
 
+
+bool CMMDVMCal::getStatus()
+{
+	unsigned char buffer[16U];
+	buffer[0U]  = MMDVM_FRAME_START;
+	buffer[1U]  = 3U;
+	buffer[2U]  = MMDVM_GET_STATUS;
+
+	int ret = m_serial.write(buffer, 3U);
+	if (ret != 3)
+		return false;
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
+
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stderr, "The MMDVM is not responding to the GET_STATUS command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
+
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stderr, "Received a NAK to the GET_STATUS command from the modem, %u" EOL, m_buffer[4U]);
+		return false;
+	}
+
+	return true;
+}
+
+
 RESP_TYPE_MMDVM CMMDVMCal::getResponse()
 {
 	if (m_offset == 0U) {
@@ -1381,7 +1455,7 @@ RESP_TYPE_MMDVM CMMDVMCal::getResponse()
 		}
 	}
 
-	m_offset = 0U;
+	m_offset = 0;
 
 	return RTM_OK;
 }
