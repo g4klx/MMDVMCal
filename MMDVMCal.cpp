@@ -530,7 +530,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	unsigned char buffer[50U];
 
 	buffer[0U] = MMDVM_FRAME_START;
-	buffer[1U] = 22U;
+	buffer[1U] = 24U;
 	buffer[2U] = MMDVM_SET_CONFIG;
 
 	buffer[3U] = 0x00U;
@@ -578,8 +578,10 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	buffer[19U] = 0U;
 	buffer[20U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[21U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[22U] = 0U;
+	buffer[23U] = 0U;
 
-	int ret = m_serial.write(buffer, 22U);
+	int ret = m_serial.write(buffer, 24U);
 	if (ret <= 0)
 		return false;
 
