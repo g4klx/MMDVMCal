@@ -20,6 +20,8 @@ class CUtils {
 public:
 	static void dump(const std::string& title, const unsigned char* data, unsigned int length);
 
+	static void bitsToByteBE(const bool* bits, unsigned char& byte);
+
 private:
 };
 
