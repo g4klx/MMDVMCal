@@ -47,5 +47,8 @@ YSFConvolution.o:	YSFConvolution.cpp YSFConvolution.h
 YSFFICH:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.h
 		$(CXX) $(CXXFLAGS) -c YSFFICH.cpp
 
+install:
+		install -m 755 MMDVMCal /usr/local/bin/
+
 clean:
 		rm -f *.o *.bak *~ MMDVMCal
