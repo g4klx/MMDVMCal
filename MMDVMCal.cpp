@@ -579,7 +579,7 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 	buffer[23U] = 0U;
 	buffer[24U] = (unsigned char)(txlevel * 2.55F + 0.5F);
 	buffer[25U] = 134U;		// +6
-	buffer[26U] = 122U;		// -6
+	buffer[26U] = 0U;
 
 	int ret = m_serial.write(buffer, 27U);
 	if (ret <= 0)
