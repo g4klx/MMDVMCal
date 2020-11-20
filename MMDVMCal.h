@@ -47,6 +47,9 @@ enum MMDVM_STATE {
   STATE_P25       = 4,
   STATE_NXDN      = 5,
   STATE_POCSAG    = 6,
+  STATE_M17       = 7,
+  STATE_FM        = 10,
+  STATE_AX25      = 11,
   STATE_NXDNCAL1K = 91,
   STATE_DMRDMO1K  = 92,
   STATE_P25CAL1K  = 93,
@@ -96,12 +99,14 @@ private:
 	unsigned int      m_length;
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
+	unsigned char     m_version;
 	bool              m_dstarEnabled;
 	bool              m_dmrEnabled;
 	bool              m_dmrBERFEC;
 	bool              m_ysfEnabled;
 	bool              m_p25Enabled;
 	bool              m_nxdnEnabled;
+	bool              m_m17Enabled;
 	bool              m_pocsagEnabled;
 	bool              m_fmEnabled;
 	bool              m_ax25Enabled;
@@ -144,7 +149,8 @@ private:
 
 	bool initModem();
 	void displayModem(const unsigned char* buffer, unsigned int length);
-	bool writeConfig(float txlevel, bool debug);
+	bool writeConfig1(float txlevel, bool debug);
+	bool writeConfig2(float txlevel, bool debug);
 	void sleep(unsigned int ms);
 	bool setFrequency();
 	bool getStatus();

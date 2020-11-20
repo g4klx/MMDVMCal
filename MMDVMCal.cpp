@@ -38,9 +38,42 @@ const unsigned char MMDVM_GET_VERSION = 0x00U;
 const unsigned char MMDVM_SET_CONFIG  = 0x02U;
 const unsigned char MMDVM_SET_FREQ    = 0x04U;
 const unsigned char MMDVM_CAL_DATA    = 0x08U;
+const unsigned char MMDVM_RSSI_DATA   = 0x09U;
+
+const unsigned char MMDVM_DSTAR_HEADER = 0x10U;
+const unsigned char MMDVM_DSTAR_DATA   = 0x11U;
+const unsigned char MMDVM_DSTAR_LOST   = 0x12U;
+const unsigned char MMDVM_DSTAR_EOT    = 0x13U;
+
+const unsigned char MMDVM_DMR_DATA1   = 0x18U;
+const unsigned char MMDVM_DMR_LOST1   = 0x19U;
+const unsigned char MMDVM_DMR_DATA2   = 0x1AU;
+const unsigned char MMDVM_DMR_LOST2   = 0x1BU;
+const unsigned char MMDVM_DMR_SHORTLC = 0x1CU;
+const unsigned char MMDVM_DMR_START   = 0x1DU;
+const unsigned char MMDVM_DMR_ABORT   = 0x1EU;
+
+const unsigned char MMDVM_YSF_DATA    = 0x20U;
+const unsigned char MMDVM_YSF_LOST    = 0x21U;
+
+const unsigned char MMDVM_P25_HDR     = 0x30U;
+const unsigned char MMDVM_P25_LDU     = 0x31U;
+const unsigned char MMDVM_P25_LOST    = 0x32U;
+
+const unsigned char MMDVM_NXDN_DATA   = 0x40U;
+const unsigned char MMDVM_NXDN_LOST   = 0x41U;
+
+const unsigned char MMDVM_M17_DATA    = 0x45U;
+const unsigned char MMDVM_M17_LOST    = 0x46U;
 
 const unsigned char MMDVM_ACK         = 0x70U;
 const unsigned char MMDVM_NAK         = 0x7FU;
+
+const unsigned char MMDVM_DEBUG1      = 0xF1U;
+const unsigned char MMDVM_DEBUG2      = 0xF2U;
+const unsigned char MMDVM_DEBUG3      = 0xF3U;
+const unsigned char MMDVM_DEBUG4      = 0xF4U;
+const unsigned char MMDVM_DEBUG5      = 0xF5U;
 
 const unsigned int MAX_RESPONSES = 30U;
 const unsigned int BUFFER_LENGTH = 2000U;
@@ -79,12 +112,15 @@ m_debug(false),
 m_buffer(NULL),
 m_length(0U),
 m_offset(0U),
+m_hwType(),
+m_version(0U),
 m_dstarEnabled(false),
 m_dmrEnabled(false),
 m_dmrBERFEC(true),
 m_ysfEnabled(false),
 m_p25Enabled(false),
 m_nxdnEnabled(false),
+m_m17Enabled(false),
 m_pocsagEnabled(false),
 m_fmEnabled(false),
 m_ax25Enabled(false)
@@ -141,7 +177,7 @@ void CMMDVMCal::loop_MMDVM()
 {
 	displayHelp_MMDVM();
 
-	unsigned int counter=0;
+	unsigned int counter = 0U;
 	bool end = false;
 	while (!end) {
 		int c = m_console.getChar();
@@ -267,14 +303,13 @@ void CMMDVMCal::loop_MMDVM()
 		m_ber.clock();
 		sleep(5U);
 
-	        if(counter >= 200)
-        	{
+		if (counter >= 200U) {
 			if (getStatus())
-		    		displayModem(m_buffer, m_length);
-			counter=0;
+				displayModem(m_buffer, m_length);
+			counter = 0U;
 		}
-		counter++;
 
+		counter++;
 	}
 }
 
@@ -318,10 +353,18 @@ void CMMDVMCal::displayHelp_MMDVM()
 void CMMDVMCal::loop_MMDVM_HS()
 {
 	m_mode = STATE_DMRCAL;
-	unsigned int counter=0;
+	unsigned int counter = 0U;
 
 	setFrequency();
-	writeConfig(m_txLevel, m_debug);
+
+	switch (m_version) {
+	case 1U:
+		writeConfig1(m_txLevel, m_debug);
+		break;
+	case 2U:
+		writeConfig2(m_txLevel, m_debug);
+		break;
+	}
 
 	displayHelp_MMDVM_HS();
 
@@ -432,13 +475,13 @@ void CMMDVMCal::loop_MMDVM_HS()
 		m_ber.clock();
 		sleep(5U);
 
-                if(counter >= 200)
-                {
-		        if (getStatus())
-	    		    displayModem(m_buffer, m_length);
-		        counter=0;
-	        }
-                counter++; 
+		if (counter >= 200U) {
+			if (getStatus())
+	    		displayModem(m_buffer, m_length);
+			counter = 0U;
+		}
+
+		counter++; 
 	}
 }
 
@@ -496,17 +539,71 @@ bool CMMDVMCal::initModem()
 			sleep(10U);
 			RESP_TYPE_MMDVM resp = getResponse();
 			if (resp == RTM_OK && m_buffer[2U] == MMDVM_GET_VERSION) {
-				::fprintf(stderr, "Version: %u, description: %.*s" EOL, m_buffer[3U], m_length - 4U, m_buffer + 4U);
-				if (::memcmp(m_buffer + 4U, "MMDVM ", 6U) == 0)
-					m_hwType = HWT_MMDVM;
-				else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 4U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 4U, "SkyBridge", 9U) == 0))
-					m_hwType = HWT_MMDVM_HS;
-				else {
-					::fprintf(stderr, "Board not supported" EOL);
+				m_version = m_buffer[3U];
+
+				switch (m_version) {
+				case 1U:
+					::fprintf(stderr, "Version: 1, description: %.*s" EOL, m_length - 4U, m_buffer + 4U);
+					if (::memcmp(m_buffer + 4U, "MMDVM ", 6U) == 0)
+						m_hwType = HWT_MMDVM;
+					else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 4U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 4U, "SkyBridge", 9U) == 0))
+						m_hwType = HWT_MMDVM_HS;
+					else {
+						::fprintf(stderr, "Board not supported" EOL);
+						return false;
+					}
+					return writeConfig1(m_txLevel, m_debug);
+
+				case 2U:
+					::fprintf(stderr, "Version: 2, description: %.*s" EOL, m_length - 23U, m_buffer + 23U);
+					if (::memcmp(m_buffer + 23U, "MMDVM ", 6U) == 0)
+						m_hwType = HWT_MMDVM;
+					else if ((::memcmp(m_buffer + 23U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 23U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 23U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 23U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 23U, "SkyBridge", 9U) == 0))
+						m_hwType = HWT_MMDVM_HS;
+					else {
+						::fprintf(stderr, "Board not supported" EOL);
+						return false;
+					}
+					switch (m_buffer[6U]) {
+					case 0U:
+						::fprintf(stderr, "CPU: Atmel ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U], m_buffer[21U], m_buffer[22U]);
+						break;
+					case 1U:
+						::fprintf(stderr, "CPU: NXP ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U], m_buffer[19U], m_buffer[20U], m_buffer[21U], m_buffer[22U]);
+						break;
+					case 2U:
+						::fprintf(stderr, "CPU: ST-Micro ARM, UDID: %02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X", m_buffer[7U], m_buffer[8U], m_buffer[9U], m_buffer[10U], m_buffer[11U], m_buffer[12U], m_buffer[13U], m_buffer[14U], m_buffer[15U], m_buffer[16U], m_buffer[17U], m_buffer[18U]);
+						break;
+					default:
+						::fprintf(stderr, "CPU: Unknown type: %u", m_buffer[6U]);
+						break;
+					}
+					::fprintf(stderr, "Modes:");
+					if ((m_buffer[4U] & 0x01U) == 0x01U)
+						::fprintf(stderr, " D-Star");
+					if ((m_buffer[4U] & 0x02U) == 0x02U)
+						::fprintf(stderr, " DMR");
+					if ((m_buffer[4U] & 0x04U) == 0x04U)
+						::fprintf(stderr, " YSF");
+					if ((m_buffer[4U] & 0x08U) == 0x08U)
+						::fprintf(stderr, " P25");
+					if ((m_buffer[4U] & 0x10U) == 0x10U)
+						::fprintf(stderr, " NXDN");
+					if ((m_buffer[4U] & 0x20U) == 0x20U)
+						::fprintf(stderr, " M17");
+					if ((m_buffer[4U] & 0x40U) == 0x40U)
+						::fprintf(stderr, " FM");
+					if ((m_buffer[5U] & 0x01U) == 0x01U)
+						::fprintf(stderr, " POCSAG");
+					if ((m_buffer[5U] & 0x02U) == 0x02U)
+						::fprintf(stderr, " AX.25");
+					::fprintf(stderr, EOL);
+					return writeConfig2(m_txLevel, m_debug);
+
+				default:
+					::fprintf(stderr, "Version not supported" EOL);
 					return false;
 				}
-
-				return writeConfig(m_txLevel, m_debug);
 
 				return true;
 			}
@@ -520,7 +617,7 @@ bool CMMDVMCal::initModem()
 	return false;
 }
 
-bool CMMDVMCal::writeConfig(float txlevel, bool debug)
+bool CMMDVMCal::writeConfig1(float txlevel, bool debug)
 {
 	unsigned char buffer[50U];
 
@@ -607,6 +704,117 @@ bool CMMDVMCal::writeConfig(float txlevel, bool debug)
 
 	return true;
 }
+bool CMMDVMCal::writeConfig2(float txlevel, bool debug)
+{
+	unsigned char buffer[50U];
+
+	buffer[0U] = MMDVM_FRAME_START;
+	buffer[1U] = 40U;
+	buffer[2U] = MMDVM_SET_CONFIG;
+
+	buffer[3U] = 0x00U;
+	if (m_rxInvert)
+		buffer[3U] |= 0x01U;
+	if (m_txInvert)
+		buffer[3U] |= 0x02U;
+	if (m_pttInvert)
+		buffer[3U] |= 0x04U;
+	if (!m_duplex)
+		buffer[3U] |= 0x80U;
+	if (debug)
+		buffer[3U] |= 0x10U;
+
+	buffer[4U] = 0x00U;
+	if (m_dstarEnabled)
+		buffer[4U] |= 0x01U;
+	if (m_dmrEnabled)
+		buffer[4U] |= 0x02U;
+	if (m_ysfEnabled)
+		buffer[4U] |= 0x04U;
+	if (m_p25Enabled)
+		buffer[4U] |= 0x08U;
+	if (m_nxdnEnabled)
+		buffer[4U] |= 0x10U;
+	if (m_fmEnabled)
+		buffer[4U] |= 0x20U;
+	if (m_m17Enabled)
+		buffer[4U] |= 0x40U;
+
+	buffer[5U] = 0x00U;
+	if (m_pocsagEnabled)
+		buffer[5U] |= 0x01U;
+	if (m_ax25Enabled)
+		buffer[5U] |= 0x02U;
+
+	buffer[6U] = 0U;
+
+	buffer[7U] = m_mode;
+
+	buffer[8U] = (unsigned char)(m_txDCOffset + 128);
+	buffer[9U] = (unsigned char)(m_rxDCOffset + 128);
+
+	buffer[10U] = (unsigned char)(m_rxLevel * 2.55F + 0.5F);
+
+	buffer[11U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[12U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[13U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[14U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[15U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[16U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[17U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[18U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[19U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[20U] = (unsigned char)(txlevel * 2.55F + 0.5F);
+	buffer[21U] = 0x00U;
+	buffer[22U] = 0x00U;
+
+	buffer[23U] = 0x00U;
+	buffer[24U] = 0x00U;
+	buffer[25U] = 0x00U;
+	buffer[26U] = 0x00U;
+	buffer[27U] = 0x00U;
+	buffer[28U] = 0x00U;
+
+	buffer[29U] = 1U;
+	buffer[30U] = 0U;
+
+	buffer[31U] = 134U;		// +6
+	buffer[32U] = 0U;
+	buffer[33U] = 0U;
+	buffer[34U] = 0U;
+	
+	buffer[35U] = 0x00U;
+	buffer[36U] = 0x00U;
+	buffer[37U] = 0x00U;
+	buffer[38U] = 0x00U;
+	buffer[39U] = 0x00U;
+
+	int ret = m_serial.write(buffer, 40U);
+	if (ret <= 0)
+		return false;
+
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
+
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stdout, "The MMDVM is not responding to the SET_CONFIG command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
+
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stdout, "Received a NAK to the SET_CONFIG command from the modem: %u" EOL, m_buffer[4U]);
+		return false;
+	}
+
+	return true;
+}
 
 bool CMMDVMCal::setRXInvert()
 {
@@ -614,7 +822,14 @@ bool CMMDVMCal::setRXInvert()
 
 	::fprintf(stdout, "RX Invert: %s" EOL, m_rxInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setTXInvert()
@@ -623,7 +838,14 @@ bool CMMDVMCal::setTXInvert()
 
 	::fprintf(stdout, "TX Invert: %s" EOL, m_txInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setPTTInvert()
@@ -632,7 +854,14 @@ bool CMMDVMCal::setPTTInvert()
 
 	::fprintf(stdout, "PTT Invert: %s" EOL, m_pttInvert ? "On" : "Off");
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDebug()
@@ -641,7 +870,14 @@ bool CMMDVMCal::setDebug()
 
 	::fprintf(stdout, "Modem debug: %s" EOL, m_debug ? "On" : "Off");
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDMRDeviation()
@@ -654,44 +890,57 @@ bool CMMDVMCal::setDMRDeviation()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "DMR Deviation Mode (Set to 2.75Khz Deviation)" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setFMDeviation()
 {
-        switch (m_mode)
-        {
-          case STATE_FMCAL10K:
-            m_mode = STATE_FMCAL12K;
-   	    ::fprintf(stdout, "FM 12.5Khz channel spacing with 2.50Khz Deviation (1039.5hz)" EOL);
-            break;
-          case STATE_FMCAL12K:
-            m_mode = STATE_FMCAL15K;
-   	    ::fprintf(stdout, "FM 15Khz channel spacing with 3.0Khz Deviation (1247hz)" EOL);
-            break;
-          case STATE_FMCAL15K:
-            m_mode = STATE_FMCAL20K;
-   	    ::fprintf(stdout, "FM 20Khz channel spacing with 4.0Khz Deviation (1663hz)" EOL);
-            break;
-          case STATE_FMCAL20K:
-            m_mode = STATE_FMCAL25K;
-   	    ::fprintf(stdout, "FM 25Khz channel spacing with 5.0Khz Deviation (2079hz)" EOL);
-            break;
-          case STATE_FMCAL25K:
-            m_mode = STATE_FMCAL30K;
-   	    ::fprintf(stdout, "FM 30Khz channel spacing with 6.0Khz Deviation (2495hz)" EOL);
-            break;
-          default:
-            m_mode = STATE_FMCAL10K;
-   	    ::fprintf(stdout, "FM 10Khz channel spacing with 2.30Khz Deviation (956hz)" EOL);
-          break;
-        }
+	switch (m_mode) {
+	case STATE_FMCAL10K:
+		m_mode = STATE_FMCAL12K;
+		 ::fprintf(stdout, "FM 12.5Khz channel spacing with 2.50Khz Deviation (1039.5hz)" EOL);
+		break;
+
+	case STATE_FMCAL12K:
+		m_mode = STATE_FMCAL15K;
+		::fprintf(stdout, "FM 15Khz channel spacing with 3.0Khz Deviation (1247hz)" EOL);
+		break;
+
+	case STATE_FMCAL15K:
+		m_mode = STATE_FMCAL20K;
+		::fprintf(stdout, "FM 20Khz channel spacing with 4.0Khz Deviation (1663hz)" EOL);
+		break;
+
+	case STATE_FMCAL20K:
+		m_mode = STATE_FMCAL25K;
+		::fprintf(stdout, "FM 25Khz channel spacing with 5.0Khz Deviation (2079hz)" EOL);
+		break;
+
+	case STATE_FMCAL25K:
+		m_mode = STATE_FMCAL30K;
+		::fprintf(stdout, "FM 30Khz channel spacing with 6.0Khz Deviation (2495hz)" EOL);
+		break;
+
+	default:
+		m_mode = STATE_FMCAL10K;
+		::fprintf(stdout, "FM 10Khz channel spacing with 2.30Khz Deviation (956hz)" EOL);
+		break;
+	}
+
 	m_carrier = false;
 	m_duplex = true;
 	m_dstarEnabled = false;
@@ -699,11 +948,19 @@ bool CMMDVMCal::setFMDeviation()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setLowFrequencyCal()
@@ -716,13 +973,21 @@ bool CMMDVMCal::setLowFrequencyCal()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "DMR Low Frequency Mode (80 Hz square wave)" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDMRCal1K()
@@ -735,13 +1000,21 @@ bool CMMDVMCal::setDMRCal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "DMR Duplex 1031 Hz Test Pattern (TS2 CC1 ID1 TG9)" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDMRDMO1K()
@@ -758,13 +1031,21 @@ bool CMMDVMCal::setDMRDMO1K()
 		m_ysfEnabled = false;
 		m_p25Enabled = false;
 		m_nxdnEnabled = false;
+		m_m17Enabled = false;
 		m_pocsagEnabled = false;
 		m_fmEnabled = false;
 		m_ax25Enabled = false;
 
 		::fprintf(stdout, "DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 
-		return writeConfig(m_txLevel, m_debug);
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 }
 
@@ -778,13 +1059,21 @@ bool CMMDVMCal::setP25Cal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "P25 1011 Hz Test Pattern (NAC293 ID1 TG1)" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setNXDNCal1K()
@@ -797,13 +1086,21 @@ bool CMMDVMCal::setNXDNCal1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "NXDN 1031 Hz Test Pattern (RAN1 ID1 TG1)" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setPOCSAGCal()
@@ -816,13 +1113,21 @@ bool CMMDVMCal::setPOCSAGCal()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "POCSAG 600 Hz Test Pattern" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDSTARBER_FEC()
@@ -835,13 +1140,21 @@ bool CMMDVMCal::setDSTARBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for D-Star" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDMRBER_FEC()
@@ -855,13 +1168,21 @@ bool CMMDVMCal::setDMRBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDMRBER_1K()
@@ -875,13 +1196,21 @@ bool CMMDVMCal::setDMRBER_1K()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (1031 Hz Test Pattern) for DMR Simplex" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setYSFBER_FEC()
@@ -894,13 +1223,21 @@ bool CMMDVMCal::setYSFBER_FEC()
 	m_ysfEnabled = true;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for YSF" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setP25BER_FEC()
@@ -913,13 +1250,21 @@ bool CMMDVMCal::setP25BER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = true;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for P25" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setNXDNBER_FEC()
@@ -932,13 +1277,21 @@ bool CMMDVMCal::setNXDNBER_FEC()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = true;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "BER Test Mode (FEC) for NXDN" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setDSTAR()
@@ -951,13 +1304,21 @@ bool CMMDVMCal::setDSTAR()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "D-Star Mode" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setRSSI()
@@ -970,13 +1331,21 @@ bool CMMDVMCal::setRSSI()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setIntCal()
@@ -989,13 +1358,21 @@ bool CMMDVMCal::setIntCal()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "Interrupt Counter Mode" EOL);
 
-	return writeConfig(m_txLevel, true);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setCarrier()
@@ -1008,13 +1385,21 @@ bool CMMDVMCal::setCarrier()
 	m_ysfEnabled = false;
 	m_p25Enabled = false;
 	m_nxdnEnabled = false;
+	m_m17Enabled = false;
 	m_pocsagEnabled = false;
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "Carrier Only Mode: %u Hz" EOL, m_frequency);
 
-	return writeConfig(0.0F, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setEnterFreq()
@@ -1034,8 +1419,7 @@ bool CMMDVMCal::setEnterFreq()
 			m_startfrequency = m_frequency;
 			::fprintf(stdout, "New frequency: %u Hz" EOL, m_frequency);
 			setFrequency();
-		}
-		else
+		} else
 			::fprintf(stdout, "Not valid frequency" EOL);
 	}
 
@@ -1043,7 +1427,14 @@ bool CMMDVMCal::setEnterFreq()
 
 	displayHelp_MMDVM_HS();
 
-	return writeConfig(m_txLevel, m_debug);
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
 }
 
 bool CMMDVMCal::setRXLevel(int incr)
@@ -1051,13 +1442,29 @@ bool CMMDVMCal::setRXLevel(int incr)
 	if (incr > 0 && m_rxLevel < 100.0F) {
 		m_rxLevel += 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	if (incr < 0 && m_rxLevel > 0.0F) {
 		m_rxLevel -= 0.5F;
 		::fprintf(stdout, "RX Level: %.1f%%" EOL, m_rxLevel);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	return true;
@@ -1069,13 +1476,29 @@ bool CMMDVMCal::setTXLevel(int incr)
 		if (incr > 0 && m_txLevel < 100.0F) {
 			m_txLevel += 0.5F;
 			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-			return writeConfig(m_txLevel, m_debug);
+
+			switch (m_version) {
+			case 1U:
+				return writeConfig1(m_txLevel, m_debug);
+			case 2U:
+				return writeConfig2(m_txLevel, m_debug);
+			default:
+				return false;
+			}
 		}
 
 		if (incr < 0 && m_txLevel > 0.0F) {
 			m_txLevel -= 0.5F;
 			::fprintf(stdout, "TX Level: %.1f%%" EOL, m_txLevel);
-			return writeConfig(m_txLevel, m_debug);
+
+			switch (m_version) {
+			case 1U:
+				return writeConfig1(m_txLevel, m_debug);
+			case 2U:
+				return writeConfig2(m_txLevel, m_debug);
+			default:
+				return false;
+			}
 		}
 	}
 
@@ -1084,28 +1507,42 @@ bool CMMDVMCal::setTXLevel(int incr)
 
 bool CMMDVMCal::setFreq(int incr)
 {
-	bool ret;
-
 	if (incr > 0) {
 		m_frequency += m_step;
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
-		if (m_carrier)
-			ret = writeConfig(0.0F, m_debug);
-		else
-			ret = writeConfig(m_txLevel, m_debug);
-		return ret;
+
+		float txLevel = 0.0F;
+		if (!m_carrier)
+			txLevel = m_txLevel;
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(txLevel, m_debug);
+		case 2U:
+			return writeConfig2(txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	if (incr < 0) {
 		m_frequency -= m_step;
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
-		if (m_carrier)
-			ret = writeConfig(0.0F, m_debug);
-		else
-			ret = writeConfig(m_txLevel, m_debug);
-		return ret;
+
+		float txLevel = 0.0F;
+		if (!m_carrier)
+			txLevel = m_txLevel;
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(txLevel, m_debug);
+		case 2U:
+			return writeConfig2(txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	return true;
@@ -1144,14 +1581,30 @@ bool CMMDVMCal::setPower(int incr)
 		m_power += 1.0F;
 		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
 		setFrequency();
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	if (incr < 0 && m_power > 0.0F) {
 		m_power -= 1.0F;
 		::fprintf(stdout, "RF power: %.1f%%" EOL, m_power);
 		setFrequency();
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	return true;
@@ -1162,13 +1615,29 @@ bool CMMDVMCal::setTXDCOffset(int incr)
 	if (incr > 0 && m_txDCOffset < 127) {
 		m_txDCOffset++;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	if (incr < 0 && m_txDCOffset > -128) {
 		m_txDCOffset--;
 		::fprintf(stdout, "TX DC Offset: %d" EOL, m_txDCOffset);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	return true;
@@ -1179,13 +1648,29 @@ bool CMMDVMCal::setRXDCOffset(int incr)
 	if (incr > 0 && m_rxDCOffset < 127) {
 		m_rxDCOffset++;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	if (incr < 0 && m_rxDCOffset > -128) {
 		m_rxDCOffset--;
 		::fprintf(stdout, "RX DC Offset: %d" EOL, m_rxDCOffset);
-		return writeConfig(m_txLevel, m_debug);
+
+		switch (m_version) {
+		case 1U:
+			return writeConfig1(m_txLevel, m_debug);
+		case 2U:
+			return writeConfig2(m_txLevel, m_debug);
+		default:
+			return false;
+		}
 	}
 
 	return true;
@@ -1238,61 +1723,61 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 {
 	if (buffer[2U] == MMDVM_GET_STATUS) {
 		bool adcOverflow = (buffer[5U] & 0x02U) == 0x02U;
-                if (adcOverflow)
-                	::fprintf(stderr, "MMDVM ADC levels have overflowed" EOL);
-                bool rxOverflow = (buffer[5U] & 0x04U) == 0x04U;
-                if (rxOverflow)
-                        ::fprintf(stderr,"MMDVM RX buffer has overflowed" EOL);
-                bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
-                if (txOverflow)
-                        ::fprintf(stderr,"MMDVM TX buffer has overflowed" EOL);
-                bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
-                if (dacOverflow)
-                        ::fprintf(stderr,"MMDVM DAC levels have overflowed" EOL);
-	} else if (buffer[2U] == 0x08U) {
+		if (adcOverflow)
+			::fprintf(stderr, "MMDVM ADC levels have overflowed" EOL);
+		bool rxOverflow = (buffer[5U] & 0x04U) == 0x04U;
+		if (rxOverflow)
+			::fprintf(stderr,"MMDVM RX buffer has overflowed" EOL);
+		bool txOverflow = (buffer[5U] & 0x08U) == 0x08U;
+		if (txOverflow)
+			::fprintf(stderr,"MMDVM TX buffer has overflowed" EOL);
+		bool dacOverflow = (buffer[5U] & 0x20U) == 0x20U;
+		if (dacOverflow)
+			::fprintf(stderr,"MMDVM DAC levels have overflowed" EOL);
+	} else if (buffer[2U] == MMDVM_CAL_DATA) {
 		bool  inverted = (buffer[3U] == 0x80U);
 		short high = buffer[4U] << 8 | buffer[5U];
 		short low = buffer[6U] << 8 | buffer[7U];
 		short diff = high - low;
 		short centre = (high + low) / 2;
 		::fprintf(stdout, "Levels: inverted: %s, max: %d, min: %d, diff: %d, centre: %d" EOL, inverted ? "yes" : "no", high, low, diff, centre);
-	} else if (buffer[2U] == 0x09U) {
+	} else if (buffer[2U] == MMDVM_RSSI_DATA) {
 		unsigned short max = buffer[3U] << 8 | buffer[4U];
 		unsigned short min = buffer[5U] << 8 | buffer[6U];
 		unsigned short ave = buffer[7U] << 8 | buffer[8U];
 		::fprintf(stdout, "RSSI: max: %u, min: %u, ave: %u" EOL, max, min, ave);
-	} else if (buffer[2U] == 0xF1U) {
+	} else if (buffer[2U] == MMDVM_DEBUG1) {
 		::fprintf(stdout, "Debug: %.*s" EOL, length - 3U, buffer + 3U);
-	} else if (buffer[2U] == 0xF2U) {
+	} else if (buffer[2U] == MMDVM_DEBUG2) {
 		short val1 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d" EOL, length - 5U, buffer + 3U, val1);
-	} else if (buffer[2U] == 0xF3U) {
+	} else if (buffer[2U] == MMDVM_DEBUG3) {
 		short val1 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val2 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d" EOL, length - 7U, buffer + 3U, val1, val2);
-	} else if (buffer[2U] == 0xF4U) {
+	} else if (buffer[2U] == MMDVM_DEBUG4) {
 		short val1 = (buffer[length - 6U] << 8) | buffer[length - 5U];
 		short val2 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val3 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d" EOL, length - 9U, buffer + 3U, val1, val2, val3);
-	} else if (buffer[2U] == 0xF5U) {
+	} else if (buffer[2U] == MMDVM_DEBUG5) {
 		short val1 = (buffer[length - 8U] << 8) | buffer[length - 7U];
 		short val2 = (buffer[length - 6U] << 8) | buffer[length - 5U];
 		short val3 = (buffer[length - 4U] << 8) | buffer[length - 3U];
 		short val4 = (buffer[length - 2U] << 8) | buffer[length - 1U];
 		::fprintf(stdout, "Debug: %.*s %d %d %d %d" EOL, length - 11U, buffer + 3U, val1, val2, val3, val4);
-	} else if (buffer[2U] == 0x10U || buffer[2U] == 0x11U || buffer[2U] == 0x12U || buffer[2U] == 0x13U) {
+	} else if (buffer[2U] == MMDVM_DSTAR_HEADER || buffer[2U] == MMDVM_DSTAR_DATA || buffer[2U] == MMDVM_DSTAR_LOST || buffer[2U] == MMDVM_DSTAR_EOT) {
 		m_ber.DSTARFEC(buffer + 3U, buffer[2U]);
-	} else if (buffer[2U] == 0x18U || buffer[2U] == 0x1AU) {
+	} else if (buffer[2U] == MMDVM_DMR_DATA1 || buffer[2U] == MMDVM_DMR_DATA2) {
 		if (m_dmrBERFEC)
 			m_ber.DMRFEC(buffer + 4U, buffer[3]);
 		else
 			m_ber.DMR1K(buffer + 4U, buffer[3]);
-	} else if (buffer[2U] == 0x20U) {
+	} else if (buffer[2U] == MMDVM_YSF_DATA) {
 		m_ber.YSFFEC(buffer + 4U);
-	} else if (buffer[2U] == 0x30U || buffer[2U] == 0x31U) {
+	} else if (buffer[2U] == MMDVM_P25_HDR || buffer[2U] == MMDVM_P25_LDU) {
 		m_ber.P25FEC(buffer + 4U);
-	} else if (buffer[2U] == 0x40U) {
+	} else if (buffer[2U] == MMDVM_NXDN_DATA) {
 		m_ber.NXDNFEC(buffer + 4U, buffer[3U]);
 	} else if (m_hwType == HWT_MMDVM && m_mode != STATE_DMR && m_mode != STATE_P25 && m_mode != STATE_NXDN) {
 		CUtils::dump("Response", buffer, length);
@@ -1349,7 +1834,6 @@ bool CMMDVMCal::setFrequency()
 
 	return true;
 }
-
 
 bool CMMDVMCal::getStatus()
 {
