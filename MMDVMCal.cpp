@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 }
 
 CMMDVMCal::CMMDVMCal(const std::string& port) :
-m_serial(port, SERIAL_115200),
+m_serial(port, SERIAL_460800),
 m_console(),
 m_transmit(false),
 m_carrier(false),
