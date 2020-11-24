@@ -44,7 +44,7 @@ Utils.o:	Utils.cpp Utils.h
 YSFConvolution.o:	YSFConvolution.cpp YSFConvolution.h
 		$(CXX) $(CXXFLAGS) -c YSFConvolution.cpp
 
-YSFFICH:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.h
+YSFFICH.o:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.h
 		$(CXX) $(CXXFLAGS) -c YSFFICH.cpp
 
 install:
