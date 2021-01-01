@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016,2017,2018,2020 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017,2018,2020,2021 by Jonathan Naylor G4KLX
  *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
@@ -456,7 +456,6 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    P        Increase RF power" EOL);
 	::fprintf(stdout, "    p        Decrease RF power" EOL);
 	::fprintf(stdout, "    C/c      Carrier Only Mode" EOL);
-	::fprintf(stdout, "    K/k      Set FM Deviation Modes" EOL);
 	::fprintf(stdout, "    D/d      DMR Deviation Mode (Adjust for 2.75Khz Deviation)" EOL);
 	::fprintf(stdout, "    M/m      DMR Simplex 1031 Hz Test Pattern (CC1 ID1 TG9)" EOL);
 	::fprintf(stdout, "    K/k      BER Test Mode (FEC) for D-Star" EOL);
