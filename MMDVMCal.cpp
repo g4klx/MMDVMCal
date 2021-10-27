@@ -287,6 +287,9 @@ void CMMDVMCal::loop_MMDVM()
 			case 's':
 				setRSSI();
 				break;
+			case 'e':
+				setM17Cal();
+				break;
 			case -1:
 			case  0:
 				break;
@@ -345,6 +348,7 @@ void CMMDVMCal::displayHelp_MMDVM()
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
 	::fprintf(stdout, "    g        POCSAG 600Hz Test Pattern" EOL);
+	::fprintf(stdout, "    e        M17 Preamble Test Pattern" EOL);
 	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
 	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
@@ -1336,6 +1340,33 @@ bool CMMDVMCal::setRSSI()
 	m_ax25Enabled = false;
 
 	::fprintf(stdout, "RSSI Mode" EOL);
+
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
+}
+
+bool CMMDVMCal::setM17Cal()
+{
+	m_mode = STATE_M17CAL;
+	m_carrier = false;
+	m_duplex = false;
+	m_dstarEnabled = false;
+	m_dmrEnabled = false;
+	m_ysfEnabled = false;
+	m_p25Enabled = false;
+	m_nxdnEnabled = false;
+	m_m17Enabled = false;
+	m_pocsagEnabled = false;
+	m_fmEnabled = false;
+	m_ax25Enabled = false;
+
+	::fprintf(stdout, "M17 Preamble Test Pattern" EOL);
 
 	switch (m_version) {
 	case 1U:

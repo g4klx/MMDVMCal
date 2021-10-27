@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016,2017,2020 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017,2020,2021 by Jonathan Naylor G4KLX
  *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
@@ -65,7 +65,8 @@ enum MMDVM_STATE {
   STATE_FMCAL15K  = 104,
   STATE_FMCAL20K  = 105,
   STATE_FMCAL25K  = 106,
-  STATE_FMCAL30K  = 107
+  STATE_FMCAL30K  = 107,
+  STATE_M17CAL    = 108
 };
 
 class CMMDVMCal {
@@ -145,6 +146,7 @@ private:
 	bool setNXDNBER_FEC();
 	bool setDSTAR();
 	bool setRSSI();
+	bool setM17Cal();
 	bool setIntCal();
 
 	bool initModem();
