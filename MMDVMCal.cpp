@@ -63,8 +63,23 @@ const unsigned char MMDVM_P25_LOST    = 0x32U;
 const unsigned char MMDVM_NXDN_DATA   = 0x40U;
 const unsigned char MMDVM_NXDN_LOST   = 0x41U;
 
-const unsigned char MMDVM_M17_DATA    = 0x45U;
-const unsigned char MMDVM_M17_LOST    = 0x46U;
+const unsigned char MMDVM_M17_LINK_SETUP = 0x45U;
+const unsigned char MMDVM_M17_STREAM     = 0x46U;
+const unsigned char MMDVM_M17_PACKET     = 0x47U;
+const unsigned char MMDVM_M17_LOST       = 0x48U;
+const unsigned char MMDVM_M17_EOT        = 0x49U;
+
+const unsigned char MMDVM_POCSAG_DATA = 0x50U;
+
+const unsigned char MMDVM_AX25_DATA   = 0x55U;
+
+const unsigned char MMDVM_FM_PARAMS1  = 0x60U;
+const unsigned char MMDVM_FM_PARAMS2  = 0x61U;
+const unsigned char MMDVM_FM_PARAMS3  = 0x62U;
+const unsigned char MMDVM_FM_PARAMS4  = 0x63U;
+const unsigned char MMDVM_FM_DATA     = 0x65U;
+const unsigned char MMDVM_FM_CONTROL  = 0x66U;
+const unsigned char MMDVM_FM_EOT      = 0x67U;
 
 const unsigned char MMDVM_ACK         = 0x70U;
 const unsigned char MMDVM_NAK         = 0x7FU;
@@ -80,18 +95,29 @@ const unsigned int BUFFER_LENGTH = 2000U;
 
 int main(int argc, char** argv)
 {
-	if (argc < 2) {
-		::fprintf(stderr, "Usage: MMDVMCal <port>\n");
+	if (argc < 3) {
+		::fprintf(stderr, "Usage: MMDVMCal <speed> <port>\n");
 		return 1;
 	}
 
-	CMMDVMCal cal(argv[1]);
+	SERIAL_SPEED speed = SERIAL_460800;
+
+	if (::strcmp(argv[1], "115200") == 0)
+		speed = SERIAL_115200;
+	else if (::strcmp(argv[1], "230400") == 0)
+		speed = SERIAL_230400;
+	else if (::strcmp(argv[1], "460800") == 0)
+		speed = SERIAL_460800;
+	else
+		::fprintf(stderr, "MMDVMCal: unknown speed - %s, using 460800\n", argv[1]);
+
+	CMMDVMCal cal(argv[2], speed);
 
 	return cal.run();
 }
 
-CMMDVMCal::CMMDVMCal(const std::string& port) :
-m_serial(port, SERIAL_460800),
+CMMDVMCal::CMMDVMCal(const std::string& port, SERIAL_SPEED speed) :
+m_serial(port, speed),
 m_console(),
 m_transmit(false),
 m_carrier(false),

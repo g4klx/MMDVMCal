@@ -71,7 +71,7 @@ enum MMDVM_STATE {
 
 class CMMDVMCal {
 public:
-	CMMDVMCal(const std::string& port);
+	CMMDVMCal(const std::string& port, SERIAL_SPEED speed);
 	~CMMDVMCal();
 
 	int run();
