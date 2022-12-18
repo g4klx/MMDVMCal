@@ -306,48 +306,83 @@ bool CSerialController::open()
 		termios.c_cc[VTIME] = 10;
 #endif
 
+#if !defined(B38400) || (B38400 != 38400)
 		switch (m_speed) {
+#if defined(B1200)
 			case SERIAL_1200:
 				::cfsetospeed(&termios, B1200);
 				::cfsetispeed(&termios, B1200);
 				break;
+#endif /*B1200*/
+#if defined(B2400)
 			case SERIAL_2400:
 				::cfsetospeed(&termios, B2400);
 				::cfsetispeed(&termios, B2400);
 				break;
+#endif /*B2400*/
+#if defined(B4800)
 			case SERIAL_4800:
 				::cfsetospeed(&termios, B4800);
 				::cfsetispeed(&termios, B4800);
 				break;
+#endif /*B4800*/
+#if defined(B9600)
 			case SERIAL_9600:
 				::cfsetospeed(&termios, B9600);
 				::cfsetispeed(&termios, B9600);
 				break;
+#endif /*B9600*/
+#if defined(B19200)
 			case SERIAL_19200:
 				::cfsetospeed(&termios, B19200);
 				::cfsetispeed(&termios, B19200);
 				break;
+#endif /*B19200*/
+#if defined(B38400)
 			case SERIAL_38400:
 				::cfsetospeed(&termios, B38400);
 				::cfsetispeed(&termios, B38400);
 				break;
+#endif /*B38400*/
+#if defined(B57600)
+			case SERIAL_57600:
+				::cfsetospeed(&termios, B57600);
+				::cfsetispeed(&termios, B57600);
+				break;
+#endif /*B57600*/
+#if defined(B76800)
+			case SERIAL_76800:
+				::cfsetospeed(&termios, B76800);
+				::cfsetispeed(&termios, B76800);
+				break;
+#endif /*B76800*/
+#if defined(B115200)
 			case SERIAL_115200:
 				::cfsetospeed(&termios, B115200);
 				::cfsetispeed(&termios, B115200);
 				break;
+#endif /*B115200*/
+#if defined(B230400)
 			case SERIAL_230400:
 				::cfsetospeed(&termios, B230400);
 				::cfsetispeed(&termios, B230400);
 				break;
+#endif /*B230400*/
+#if defined(B460800)
 			case SERIAL_460800:
 				::cfsetospeed(&termios, B460800);
 				::cfsetispeed(&termios, B460800);
 				break;
+#endif /*B460800*/
 			default:
 				::fprintf(stderr, "Unsupported serial port speed - %d" EOL, int(m_speed));
 				::close(m_fd);
 				return false;
 		}
+#else
+		::cfsetospeed(&termios, m_speed);
+		::cfsetispeed(&termios, m_speed);
+#endif
 
 		if (::tcsetattr(m_fd, TCSANOW, &termios) < 0) {
 			::fprintf(stderr, "Cannot set the attributes for %s" EOL, m_device.c_str());
