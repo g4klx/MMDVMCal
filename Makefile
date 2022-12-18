@@ -6,7 +6,7 @@ CXX = c++
 CXXFLAGS = -O2 -Wall -std=c++0x
 
 MMDVMCal:	BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
-		$(LD) $(LDFLAGS) -o MMDVMCal BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
+		$(CXX) $(LDFLAGS) -o MMDVMCal BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
 
 BERCal.o:	BERCal.cpp BERCal.h Golay24128.h Utils.h
 		$(CXX) $(CXXFLAGS) -c BERCal.cpp
