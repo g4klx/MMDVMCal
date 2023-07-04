@@ -27,6 +27,7 @@ public:
 
 	void DSTARFEC(const unsigned char* buffer, const unsigned char m_tag);
 	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq);
+	void DMRFEC(const unsigned char* buffer, const unsigned char m_seq, float *BER);
 	void DMR1K(const unsigned char *buffer, const unsigned char m_seq);
 	void YSFFEC(const unsigned char* buffer);
 	void P25FEC(const unsigned char* buffer);

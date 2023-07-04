@@ -1,18 +1,28 @@
-all:	MMDVMCal
+all:	MMDVMCal_eeprom
 
 LD  = c++
 CXX = c++
 
-CXXFLAGS = -O2 -Wall -std=c++0x
+CXXFLAGS = -O2 -Wall -std=c++0x -li2c
+LDFLAGS = -li2c
 
-MMDVMCal:	BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
-		$(CXX) $(LDFLAGS) -o MMDVMCal BERCal.o CRC.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
+MMDVMCal_eeprom:	24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
+			$(CXX) $(LDFLAGS) -o MMDVMCal_eeprom 24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o  Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
 
 BERCal.o:	BERCal.cpp BERCal.h Golay24128.h Utils.h
 		$(CXX) $(CXXFLAGS) -c BERCal.cpp
 
-CRC.o:	CRC.cpp CRC.h
+ConfigFile.o:	ConfigFile.cpp ConfigFile.h
+		$(CXX) $(CXXFLAGS) -c ConfigFile.cpp
+
+CRC.o:		CRC.cpp CRC.h
 		$(CXX) $(CXXFLAGS) -c CRC.cpp
+
+24cXX.o:	24cXX.cpp 24cXX.h
+		$(CXX) $(CXXFLAGS) -c 24cXX.cpp 
+
+EEPROMData.o:	EEPROMData.cpp EEPROMData.h 24cXX.h
+		$(CXX) $(CXXFLAGS) -c EEPROMData.cpp
 
 Hamming.o:	Hamming.cpp Hamming.h
 		$(CXX) $(CXXFLAGS) -c Hamming.cpp
@@ -48,7 +58,7 @@ YSFFICH.o:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.
 		$(CXX) $(CXXFLAGS) -c YSFFICH.cpp
 
 install:
-		install -m 755 MMDVMCal /usr/local/bin/
+		install -m 755 MMDVMCal_eeprom /usr/local/bin/
 
 clean:
-		rm -f *.o *.bak *~ MMDVMCal
+		rm -f *.o *.bak *~ MMDVMCal_eeprom

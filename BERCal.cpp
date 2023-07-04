@@ -668,6 +668,109 @@ void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 		::fprintf(stdout, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)" EOL, m_seq & 0x0FU, dmr_ber, errors);
 }
 
+void CBERCal::DMRFEC(const unsigned char *buffer, const unsigned char m_seq, float *BER)
+{
+
+	if (m_seq == 65U) {
+		//::fprintf(stdout, "DMR voice header received" EOL);
+		//::fprintf(stdout, "Radio DMR transmission detected (voice header received)" EOL);
+		timerStart();
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	} else if (m_seq == 66U) {
+		//::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		*BER = float(m_errors * 100U) / float(m_bits);
+		//char quality[10];
+		if (*BER <= 1.0f) {
+			//::sprintf(quality, "Good");
+		} else if (*BER <= 1.5f) {
+			//::sprintf(quality, "OK");
+		} else {
+			//::sprintf(quality, "Bad");
+		}
+		//::fprintf(stdout, "DMR voice end received. Avg BER = %.4f%% - %s" EOL, *BER, quality);
+		timerStop();
+		m_errors = 0U;
+		m_bits = 0U;
+		m_frames = 0U;
+		return;
+	}
+
+
+	timerStart();
+
+	unsigned int a1 = 0U, a2 = 0U, a3 = 0U;
+	unsigned int MASK = 0x800000U;
+	for (unsigned int i = 0U; i < 24U; i++, MASK >>= 1) {
+		unsigned int a1Pos = DMR_A_TABLE[i];
+		unsigned int a2Pos = a1Pos + 72U;
+		if (a2Pos >= 108U)
+			a2Pos += 48U;
+		unsigned int a3Pos = a1Pos + 192U;
+
+		if (READ_BIT(buffer, a1Pos))
+			a1 |= MASK;
+		if (READ_BIT(buffer, a2Pos))
+			a2 |= MASK;
+		if (READ_BIT(buffer, a3Pos))
+			a3 |= MASK;
+	}
+
+	unsigned int b1 = 0U, b2 = 0U, b3 = 0U;
+	MASK = 0x400000U;
+	for (unsigned int i = 0U; i < 23U; i++, MASK >>= 1) {
+		unsigned int b1Pos = DMR_B_TABLE[i];
+		unsigned int b2Pos = b1Pos + 72U;
+		if (b2Pos >= 108U)
+			b2Pos += 48U;
+		unsigned int b3Pos = b1Pos + 192U;
+
+		if (READ_BIT(buffer, b1Pos))
+			b1 |= MASK;
+		if (READ_BIT(buffer, b2Pos))
+			b2 |= MASK;
+		if (READ_BIT(buffer, b3Pos))
+			b3 |= MASK;
+	}
+
+	unsigned int c1 = 0U, c2 = 0U, c3 = 0U;
+	MASK = 0x1000000U;
+	for (unsigned int i = 0U; i < 25U; i++, MASK >>= 1) {
+		unsigned int c1Pos = DMR_C_TABLE[i];
+		unsigned int c2Pos = c1Pos + 72U;
+		if (c2Pos >= 108U)
+			c2Pos += 48U;
+		unsigned int c3Pos = c1Pos + 192U;
+
+		if (READ_BIT(buffer, c1Pos))
+			c1 |= MASK;
+		if (READ_BIT(buffer, c2Pos))
+			c2 |= MASK;
+		if (READ_BIT(buffer, c3Pos))
+			c3 |= MASK;
+	}
+
+	unsigned int errors = regenerateDMR(a1, b1, c1);
+	errors += regenerateDMR(a2, b2, c2);
+	errors += regenerateDMR(a3, b3, c3);
+
+	float dmr_ber = float(errors) / 1.41F;
+
+	m_errors += errors;
+	m_bits += 141;
+	m_frames++;
+
+	if (dmr_ber < 10.0F) {
+		*BER = dmr_ber;
+		//::fprintf(stdout, "DMR audio seq. %d, FEC BER %% (errs): %.3f%% (%u/141)" EOL, m_seq & 0x0FU, dmr_ber, errors);
+		//::fprintf(stdout, "DMR BER = %.3f%%" EOL, dmr_ber);
+	} else {
+		//::fprintf(stdout, "DMR BER >= 10%%" EOL);
+	}
+}
+
 void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 {
 	unsigned int errors = 0;

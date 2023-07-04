@@ -24,9 +24,16 @@
 #include "SerialController.h"
 #include "Console.h"
 #include "BERCal.h"
+#include "EEPROMData.h"
+#include "ConfigFile.h"
 
 #include <cstring>
 #include <cstdlib>
+
+#define VHF_FREQUENCY_MIN	144000000
+#define VHF_FREQUENCY_MAX	146000000
+#define UHF_FREQUENCY_MIN	420000000
+#define UHF_FREQUENCY_MAX	450000000
 
 enum RESP_TYPE_MMDVM {
 	RTM_OK,
@@ -77,6 +84,8 @@ public:
 	int run();
 
 private:
+	ConfigFile		  m_configFile;				// For configuration file writing
+	CEEPROMData*	  m_eepromData;				// For EEPROM writing
 	CSerialController m_serial;
 	CConsole          m_console;
 	CBERCal           m_ber;
@@ -111,6 +120,25 @@ private:
 	bool              m_pocsagEnabled;
 	bool              m_fmEnabled;
 	bool              m_ax25Enabled;
+	// Below added for Nextion Screen Writing
+	const char		  m_freqText[10];
+	const char		  m_freqOffsetText[10];
+	const char		  m_statusText[10];
+	// Below added for DMR BER Sweep Test
+	float		  	  m_tmpBER;						// Instantaneous BER during freq sweep test
+	float		  	  m_tmpBERTotal;				// Accumulated BER during freq sweep test
+	bool		  	  m_freqSweep; 					// Are we performing the automated DMR BER test?
+	int 		  	  m_tmpBERNum;					// Number of BER readings (used to find average BER for given time period)
+	int	  			  m_tmpBERFreqOffsetMin;		// Minimum frequency with detectable BER
+	int	  			  m_tmpBERFreqOffsetMax;		// Maximum frequency with detectable BER
+	int				  m_tmpBERFreqDir;				// Direction of frequency sweep (-1 = decreasing, 0 = static, 1 = increasing)
+	int				  m_tmpBERFreqOffset;			// Current offset from center frequency
+	int				  m_tmpBERFreqOffsetFirst;		// The first offset that transmission was detected on (should be 0, but not guaranteed)
+	unsigned int	  m_freqSweepCounter;
+	const int		  m_freqSweepMin;				// Minimum frequency below center that frequency sweep will go
+	const int		  m_freqSweepMax;				// Maximum frequency above center that frequency sweep will go
+	int				  m_freqSweepTestResultLast;	// The last test result for optimal DMR Rx offset
+	bool			  m_freqSweepTestTaken;			// If no sweep test has been done, we don't have valid data to write to EEPROM
 
 	void displayHelp_MMDVM();
 	void displayHelp_MMDVM_HS();
@@ -148,6 +176,25 @@ private:
 	bool setRSSI();
 	bool setM17Cal();
 	bool setIntCal();
+	bool setFreqSweep(); 										// This is for an automated DMR BER test to find optimal offset
+	bool setFreqValue(unsigned int freq, bool changeStart);		// Alternative to setEnterFreq() that does not require user input, option to change m_startfrequency
+	void doFreqSweep();											// Does the actual work for setFreqSweep()
+
+	bool EEPROMDisplay();										// Print EEPROM data in human-readable form
+	bool writeEEPROMFreqSweepSimplex();							// Write the last freq sweep test result into EEPROM offset data
+	bool EEPROMInitialize();									// Write default values into EEPROM
+	bool writeEEPROMTxOffset();									// Write current offset
+	bool writeEEPROMTxOffset(int offset);						// Write specified offset
+	bool writeEEPROMRxOffset();									// Write current offset
+	bool writeEEPROMRxOffset(int offset);						// Write specified offset
+	bool setNextionText(const char *item, char *txt);			// Set Nextion text field to specified string
+	bool setNextionInt(const char *item, int n);				// Set Nextion text field to specified integer
+	bool setNextionFloat(const char *item, double f);			// Set Nextion text field to specified float value
+	bool sendNextionCmd(char *cmd);								// Send command to Nextion screen
+	bool writeCurrentOffsetConfig();							// Write current frequency offset to config file (Tx and Rx)
+	bool writeCurrentTxOffsetConfig();							// Write current frequency offset to config file (Tx only)
+	bool writeCurrentRxOffsetConfig();							// Write current frequency offset to config file (Rx only)
+	bool writeEEPROMOffsetsConfig();							// Write offsets stored in EEPROM to MMDVMHost config file
 
 	bool initModem();
 	void displayModem(const unsigned char* buffer, unsigned int length);

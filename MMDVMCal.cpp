@@ -31,6 +31,7 @@
 #endif
 
 #include "Utils.h"
+#include "24cXX.h"
 
 const unsigned char MMDVM_GET_STATUS  = 0x01U;
 const unsigned char MMDVM_FRAME_START = 0xE0U;
@@ -93,6 +94,8 @@ const unsigned char MMDVM_DEBUG5      = 0xF5U;
 const unsigned int MAX_RESPONSES = 30U;
 const unsigned int BUFFER_LENGTH = 2000U;
 
+const unsigned char MMDVM_SERIAL_DATA = 0x80U;
+
 int main(int argc, char** argv)
 {
 	if (argc < 3) {
@@ -149,8 +152,26 @@ m_nxdnEnabled(false),
 m_m17Enabled(false),
 m_pocsagEnabled(false),
 m_fmEnabled(false),
-m_ax25Enabled(false)
+m_ax25Enabled(false),
+m_freqText("t30"),
+m_freqOffsetText("t32"),
+m_statusText("t1"),
+m_tmpBER(0.0f),
+m_tmpBERTotal(0.0f),
+m_freqSweep(false),
+m_tmpBERNum(0),
+m_tmpBERFreqOffsetMin(0),
+m_tmpBERFreqOffsetMax(0),
+m_tmpBERFreqDir(0),
+m_tmpBERFreqOffset(0),
+m_tmpBERFreqOffsetFirst(0),
+m_freqSweepCounter(0),
+m_freqSweepMin(-1500),
+m_freqSweepMax(1500),
+m_freqSweepTestResultLast(0),
+m_freqSweepTestTaken(false)
 {
+	m_eepromData = new CEEPROMData;
 	m_buffer = new unsigned char[BUFFER_LENGTH];
 }
 
@@ -161,20 +182,28 @@ CMMDVMCal::~CMMDVMCal()
 int CMMDVMCal::run()
 {
 	bool ret = m_serial.open();
-	if (!ret)
+	if (!ret) {
+		delete m_eepromData;
 		return 1;
+	}
 
 	ret = initModem();
 	if (!ret) {
+		delete m_eepromData;
 		m_serial.close();
 		return 1;
 	}
 
 	ret = m_console.open();
 	if (!ret) {
+		delete m_eepromData;
 		m_serial.close();
 		return 1;
 	}
+
+	setNextionText(m_statusText, (char *) "Calibration Mode");					// Make it obvious that this is running on the Nextion Screen
+	setNextionInt(m_freqOffsetText, 0);											// Start with 0 frequency offset and show on NExtion screen
+	setNextionFloat(m_freqText, (double) (m_startfrequency / 1000000.0f));		// Display current frequency on Nextion screen
 
 	if (m_hwType == HWT_MMDVM)
 		loop_MMDVM();
@@ -183,6 +212,10 @@ int CMMDVMCal::run()
 
 	if (m_transmit)
 		setTransmit();
+
+	setNextionText(m_statusText, (char *) "");			// Clear text fields when program closes
+	setNextionText(m_freqOffsetText, (char *) "");
+	setNextionText(m_freqText, (char *) "");
 
 	m_serial.close();
 	m_console.close();
@@ -195,6 +228,8 @@ int CMMDVMCal::run()
 	else if (m_hwType == HWT_MMDVM_HS) {
 		::fprintf(stdout, "TX Level: %.1f%%, Frequency Offset: %d, RF Level: %.1f%%" EOL, m_txLevel, (int)(m_frequency - m_startfrequency), m_power);
 	}
+
+	delete m_eepromData;
 
 	return 0;
 }
@@ -316,6 +351,9 @@ void CMMDVMCal::loop_MMDVM()
 			case 'e':
 				setM17Cal();
 				break;
+			case 'z':
+			case 'Z':
+				break;
 			case -1:
 			case  0:
 				break;
@@ -384,6 +422,7 @@ void CMMDVMCal::loop_MMDVM_HS()
 {
 	m_mode = STATE_DMRCAL;
 	unsigned int counter = 0U;
+	m_freqSweepCounter = 0U;
 
 	setFrequency();
 
@@ -407,6 +446,8 @@ void CMMDVMCal::loop_MMDVM_HS()
 				displayHelp_MMDVM_HS();
 				break;
 			case 'W':
+				writeEEPROMFreqSweepSimplex();
+				break;
 			case 'w':
 				setDebug();
 				break;
@@ -415,6 +456,8 @@ void CMMDVMCal::loop_MMDVM_HS()
 				setCarrier();
 				break;
 			case 'E':
+				writeEEPROMOffsetsConfig();
+				break;
 			case 'e':
 				setEnterFreq();
 				break;
@@ -430,7 +473,21 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'f':
 				setFreq(-1);
 				break;
+			case 'X':
+				writeEEPROMTxOffset();
+				break;
+			case 'x':
+				writeEEPROMRxOffset();
+				break;
 			case 'Z':
+				EEPROMDisplay();
+				break;
+			case 'U':
+				writeCurrentOffsetConfig();
+				break;
+			case 'u':
+				writeCurrentRxOffsetConfig();
+				break;
 			case 'z':
 				setStepFreq();
 				break;
@@ -447,8 +504,10 @@ void CMMDVMCal::loop_MMDVM_HS()
 			case 'q':
 				end = true;
 				break;
-			case 'V':
 			case 'v':
+				writeCurrentTxOffsetConfig();
+				break;
+			case 'V':
 				::fprintf(stdout, VERSION EOL);
 				break;
 			case 'D':
@@ -482,10 +541,14 @@ void CMMDVMCal::loop_MMDVM_HS()
 				setPOCSAGCal();
 				break;
 			case 'S':
+				setFreqSweep();
+				break;
 			case 's':
 				setRSSI();
 				break;
 			case 'I':
+				EEPROMInitialize();
+				break;
 			case 'i':
 				setIntCal();
 				break;
@@ -505,13 +568,21 @@ void CMMDVMCal::loop_MMDVM_HS()
 		m_ber.clock();
 		sleep(5U);
 
+		// We are performing the DMR BER Frequency Sweep for Optimal Rx Offset
+		if (m_freqSweep && m_freqSweepCounter >= 200) {
+			doFreqSweep();
+			m_freqSweepCounter = 0U;
+		}
+
+		// 1 second tick
 		if (counter >= 200U) {
 			if (getStatus())
 	    		displayModem(m_buffer, m_length);
 			counter = 0U;
 		}
 
-		counter++; 
+		counter++;
+		m_freqSweepCounter++;
 	}
 }
 
@@ -520,11 +591,11 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "The commands are:" EOL);
 	::fprintf(stdout, "    H/h      Display help" EOL);
 	::fprintf(stdout, "    Q/q      Quit" EOL);
-	::fprintf(stdout, "    W/w      Enable/disable modem debug messages" EOL);
-	::fprintf(stdout, "    E/e      Enter frequency (current: %u Hz)" EOL, m_frequency);
+	::fprintf(stdout, "    w        Enable/disable modem debug messages" EOL);
+	::fprintf(stdout, "    e        Enter frequency (current: %u Hz)" EOL, m_frequency);
 	::fprintf(stdout, "    F        Increase frequency" EOL);
 	::fprintf(stdout, "    f        Decrease frequency" EOL);
-	::fprintf(stdout, "    Z/z      Enter frequency step" EOL);
+	::fprintf(stdout, "    z        Enter frequency step" EOL);
 	::fprintf(stdout, "    T        Increase deviation" EOL);
 	::fprintf(stdout, "    t        Decrease deviation" EOL);
 	::fprintf(stdout, "    P        Increase RF power" EOL);
@@ -539,10 +610,23 @@ void CMMDVMCal::displayHelp_MMDVM_HS()
 	::fprintf(stdout, "    j        BER Test Mode (FEC) for P25" EOL);
 	::fprintf(stdout, "    n        BER Test Mode (FEC) for NXDN" EOL);
 	::fprintf(stdout, "    g        POCSAG 600Hz Test Pattern" EOL);
-	::fprintf(stdout, "    S/s      RSSI Mode" EOL);
-	::fprintf(stdout, "    I/i      Interrupt Counter Mode" EOL);
-	::fprintf(stdout, "    V/v      Display version of MMDVMCal" EOL);
+	::fprintf(stdout, "    s        RSSI Mode" EOL);
+	::fprintf(stdout, "    S        Frequency Sweep Test for DMR BER" EOL);
+	::fprintf(stdout, "    i        Interrupt Counter Mode" EOL);
+	::fprintf(stdout, "    V        Display version of MMDVMCal" EOL);
 	::fprintf(stdout, "    <space>  Toggle transmit" EOL);
+	::fprintf(stdout, "EEPROM Operations:" EOL);
+	::fprintf(stdout, "    I        Initialize EEPROM (Warning: This will wipe all stored calibration data!)" EOL);
+	::fprintf(stdout, "    W        Write last DMR frequency sweep test result to EEPROM (simplex hotspots)" EOL);
+	::fprintf(stdout, "    X        Write current frequency offset to Tx offset data in EEPROM (duplex)" EOL);
+	::fprintf(stdout, "    x        Write current frequency offset to Rx offset data in EEPROM (duplex)" EOL);
+	::fprintf(stdout, "    Z        Display EEPROM storage contents" EOL);
+	::fprintf(stdout, "File Write Operations:" EOL);
+	::fprintf(stdout, "    U        Write current offset to MMDVMHost configuration file (simplex hotspots)" EOL);
+	::fprintf(stdout, "    u        Write current offset to MMDVMHost configuration file Rx offset (duplex)" EOL);
+	::fprintf(stdout, "    v        Write current offset to MMDVMHost configuration file Tx offset (duplex)" EOL);
+	::fprintf(stdout, "    E        Write stored EEPROM calibration data to MMDVMHost configuration file" EOL);
+	::fprintf(stdout, EOL);
 }
 
 bool CMMDVMCal::initModem()
@@ -1202,6 +1286,10 @@ bool CMMDVMCal::setDMRBER_FEC()
 	m_fmEnabled = false;
 	m_ax25Enabled = false;
 
+	if (m_freqSweep) {
+		m_freqSweep = false;
+	}
+
 	::fprintf(stdout, "BER Test Mode (FEC) for DMR Simplex" EOL);
 
 	switch (m_version) {
@@ -1475,6 +1563,8 @@ bool CMMDVMCal::setEnterFreq()
 			m_startfrequency = m_frequency;
 			::fprintf(stdout, "New frequency: %u Hz" EOL, m_frequency);
 			setFrequency();
+			setNextionFloat((char *) m_freqText, (double) (freq / 1000000.0f));		// Display the frequency on the Nextion screen
+			setNextionInt((char *) m_freqOffsetText, 0);	// Reset the offset on the Nextion screen
 		} else
 			::fprintf(stdout, "Not valid frequency" EOL);
 	}
@@ -1568,6 +1658,9 @@ bool CMMDVMCal::setFreq(int incr)
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
 
+		setNextionFloat("t30", (double) (m_startfrequency / 1000000.0f));	// Update frequency on Nextion screen
+		setNextionInt("t32", (int) (m_frequency - m_startfrequency));		// Update offset on Nextion screen
+
 		float txLevel = 0.0F;
 		if (!m_carrier)
 			txLevel = m_txLevel;
@@ -1586,6 +1679,9 @@ bool CMMDVMCal::setFreq(int incr)
 		m_frequency -= m_step;
 		::fprintf(stdout, "TX frequency: %u" EOL, m_frequency);
 		setFrequency();
+
+		setNextionFloat("t30", (double) (m_startfrequency / 1000000.0f));	// Update frequency on Nextion screen
+		setNextionInt("t32", (int) (m_frequency - m_startfrequency));		// Update offset on Nextion screen
 
 		float txLevel = 0.0F;
 		if (!m_carrier)
@@ -1825,10 +1921,15 @@ void CMMDVMCal::displayModem(const unsigned char *buffer, unsigned int length)
 	} else if (buffer[2U] == MMDVM_DSTAR_HEADER || buffer[2U] == MMDVM_DSTAR_DATA || buffer[2U] == MMDVM_DSTAR_LOST || buffer[2U] == MMDVM_DSTAR_EOT) {
 		m_ber.DSTARFEC(buffer + 3U, buffer[2U]);
 	} else if (buffer[2U] == MMDVM_DMR_DATA1 || buffer[2U] == MMDVM_DMR_DATA2) {
-		if (m_dmrBERFEC)
+		if (m_dmrBERFEC && m_freqSweep) {
+			m_ber.DMRFEC(buffer + 4U, buffer[3], &m_tmpBER);
+			m_tmpBERTotal += m_tmpBER;
+			m_tmpBERNum++;
+		} else if (m_dmrBERFEC) {
 			m_ber.DMRFEC(buffer + 4U, buffer[3]);
-		else
+		} else {
 			m_ber.DMR1K(buffer + 4U, buffer[3]);
+		}
 	} else if (buffer[2U] == MMDVM_YSF_DATA) {
 		m_ber.YSFFEC(buffer + 4U);
 	} else if (buffer[2U] == MMDVM_P25_HDR || buffer[2U] == MMDVM_P25_LDU) {
@@ -2025,4 +2126,526 @@ void CMMDVMCal::sleep(unsigned int ms)
 #else
 	::usleep(ms * 1000);
 #endif
+}
+
+bool CMMDVMCal::setFreqSweep()
+{
+	::fprintf(stdout, "Performing DMR BER test for optimal Rx Offset..." EOL);
+	::fprintf(stdout, "Press and hold the PTT until the test is complete." EOL);
+	// Pause to allow user to key up their radio and for it to stabilize
+	sleep(1000);
+	setFreqValue(m_startfrequency, false);
+	setDMRBER_FEC();
+
+	m_tmpBER = 0.0f;
+	m_tmpBERTotal = 0.0f;
+	m_tmpBERFreqOffset = 0;
+	m_tmpBERFreqOffsetFirst = 0;
+	m_tmpBERFreqOffsetMax = 0;
+	m_tmpBERFreqOffsetMin = 0;
+	m_tmpBERFreqDir = 0;
+	m_freqSweep = true;
+	m_freqSweepCounter = 0U;
+
+	return true;
+}
+
+bool CMMDVMCal::setFreqValue(unsigned int freq, bool changeStart)
+{
+	if (freq >= 100000000U && freq <= 999999999U) {
+		m_frequency = (unsigned int)freq;
+		if (changeStart) {
+			m_startfrequency = m_frequency;
+			setNextionFloat((char *) m_freqText, (double) (freq / 1000000.0f));		// Display the frequency on the Nextion screen
+		}
+		setNextionInt((char *) m_freqOffsetText, 0);	// Reset the offset on the Nextion screen
+		setFrequency();
+	}
+
+	switch (m_version) {
+	case 1U:
+		return writeConfig1(m_txLevel, m_debug);
+	case 2U:
+		return writeConfig2(m_txLevel, m_debug);
+	default:
+		return false;
+	}
+}
+
+void CMMDVMCal::doFreqSweep()
+{
+	if (m_tmpBERNum > 0) {
+		m_tmpBERTotal = 0.0f;
+		m_tmpBERNum = 0;
+		if (m_tmpBERFreqDir == 0) {
+			m_tmpBERFreqDir = -1;
+			m_tmpBERFreqOffsetFirst = m_tmpBERFreqOffset;
+			m_tmpBERFreqOffset -= m_step;
+			setFreq(-1);
+		} else if (m_tmpBERFreqDir < 0) {
+			m_tmpBERFreqOffset -= m_step;
+			setFreq(-1);
+		} else if (m_tmpBERFreqDir > 0) {
+			m_tmpBERFreqOffset += m_step;
+			setFreq(1);
+		}
+	} else {
+		// BER was either too high or user stopped PTTing
+		if (m_tmpBERFreqDir == 0) {
+			// The starting frequency had too high of a BER
+			if ((m_tmpBERFreqOffset <= 0) && (m_tmpBERFreqOffset > m_freqSweepMin)) {
+				m_tmpBERFreqOffset -= m_step;
+				setFreq(-1);
+			} else if ((m_tmpBERFreqOffset <= 0) && (m_tmpBERFreqOffset == m_freqSweepMin)) {
+				// We've reached the low limit. Set freq to center + m_step
+				m_tmpBERFreqOffset = m_tmpBERFreqOffsetFirst + m_step;
+				setFreqValue(m_startfrequency + m_tmpBERFreqOffsetFirst, false);
+				setFreq(1);
+			} else if ((m_tmpBERFreqOffset > 0) && (m_tmpBERFreqOffset < m_freqSweepMax)) {
+				m_tmpBERFreqOffset += m_step;
+				setFreq(1);
+			} else if ((m_tmpBERFreqOffset > 0) && (m_tmpBERFreqOffset == m_freqSweepMax)) {
+				// We've reached the high limit. Exit with error.
+				::fprintf(stdout, "Transmission not detected. Exiting." EOL);
+				m_freqSweep = false;
+				sleep(1000);
+				setFreqValue(m_startfrequency, false);
+				return;
+			}
+		} else if (m_tmpBERFreqDir < 0) {
+			// We have reached minimum frequency
+			//::fprintf(stdout, "Minimum frequency reached, resetting frequency and switching directions" EOL);
+			m_tmpBERFreqOffsetMin = m_tmpBERFreqOffset;
+			m_tmpBERFreqDir = 1;
+			// m_startfrequency may be too high if the offset is too low. Start incrementing at first detected decremented frequency + m_step
+			m_tmpBERFreqOffset = m_tmpBERFreqOffsetFirst + m_step;
+			setFreqValue(m_startfrequency + m_tmpBERFreqOffsetFirst, false);
+			setFreq(1);
+		} else if (m_tmpBERFreqDir > 0) {
+			// We have reached maximum frequency
+			//::fprintf(stdout, "Maximum frequency reached" EOL);
+			m_tmpBERFreqOffsetMax = m_tmpBERFreqOffset;
+			m_freqSweepTestResultLast = (m_tmpBERFreqOffsetMax + m_tmpBERFreqOffsetMin) / 2;
+			::fprintf(stdout, "Test complete: Min offset = %d, Max offset = %d" EOL, m_tmpBERFreqOffsetMin, m_tmpBERFreqOffsetMax);
+			::fprintf(stdout, "Optimal offset was measured to be: %d" EOL, m_freqSweepTestResultLast);
+			// We are now done
+			m_freqSweep = false;
+			setFreqValue(m_startfrequency, false);
+			m_freqSweepTestTaken = true;
+			sleep(1000);
+		}
+	}
+}
+
+bool CMMDVMCal::EEPROMDisplay()
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	bool dataIsGood = m_eepromData->checkData();
+	if (dataIsGood) {
+		::fprintf(stdout, "EEPROM offset data detected and verified." EOL);
+	} else {
+		::fprintf(stdout, "EEPROM offset data either does not exist or is corrupted." EOL);
+		return false;
+	}
+
+	int ut, ur, vt, vr;
+	m_eepromData->readOffsetData(ut, ur, vt, vr);
+	::fprintf(stdout, "UHF Tx Offset: %d" EOL, ut);
+	::fprintf(stdout, "UHF Rx Offset: %d" EOL, ur);
+	::fprintf(stdout, "VHF Tx Offset: %d" EOL, vt);
+	::fprintf(stdout, "VHF Rx Offset: %d" EOL, vr);
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMFreqSweepSimplex()
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	// Write last frequency sweep test result offset to EEPROM if it exists
+	if (!m_freqSweepTestTaken) {
+		::fprintf(stderr, "Frequency sweep test has not been run yet! Abort EEPROM write." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing test frequency offset data to EEPROM..." EOL);
+
+
+	// Write Tx and Rx offset data (Automatically writes VHF or UHF depending on frequency)
+	writeEEPROMTxOffset(m_freqSweepTestResultLast);
+	writeEEPROMRxOffset(m_freqSweepTestResultLast);
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
+}
+
+bool CMMDVMCal::EEPROMInitialize()
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Initializing EEPROM offset data..." EOL);
+
+	//Write the offset data
+	m_eepromData->setTxOffsetUHF(0);
+	m_eepromData->setRxOffsetUHF(0);
+	m_eepromData->setTxOffsetVHF(0);
+	m_eepromData->setRxOffsetVHF(0);
+	m_eepromData->writeOffsetData();
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMTxOffset()
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	int fOffset = static_cast<int>(m_frequency - m_startfrequency);
+	bool isUHF;	// Can either be UHF or VHF
+
+	// Determine if frequency is UHF or VHF
+	if (m_startfrequency >= UHF_FREQUENCY_MIN && m_startfrequency <= UHF_FREQUENCY_MAX) {
+		isUHF = true;
+		::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHF = false;
+		::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing %s Tx frequency offset of %d Hz to EEPROM..." EOL, isUHF ? "UHF" : "VHF" ,fOffset);
+
+	if (isUHF) {
+		m_eepromData->setTxOffsetUHF(fOffset);
+	} else {
+		m_eepromData->setTxOffsetVHF(fOffset);
+	}
+
+	m_eepromData->writeOffsetData();
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMTxOffset(int offset)
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	bool isUHF;	// Can either be UHF or VHF
+
+	// Determine if frequency is UHF or VHF
+	if (m_startfrequency >= UHF_FREQUENCY_MIN && m_startfrequency <= UHF_FREQUENCY_MAX) {
+		isUHF = true;
+		::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHF = false;
+		::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing %s Tx frequency offset of %d Hz to EEPROM..." EOL, isUHF ? "UHF" : "VHF", offset);
+
+	if (isUHF) {
+		m_eepromData->setTxOffsetUHF(offset);
+	} else {
+		m_eepromData->setTxOffsetVHF(offset);
+	}
+
+	m_eepromData->writeOffsetData();
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMRxOffset()
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	int fOffset = static_cast<int>(m_frequency - m_startfrequency);
+	bool isUHF;	// Can either be UHF or VHF
+
+	// Determine if frequency is UHF or VHF
+	if (m_startfrequency >= UHF_FREQUENCY_MIN && m_startfrequency <= UHF_FREQUENCY_MAX) {
+		isUHF = true;
+		::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHF = false;
+		::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing %s Rx frequency offset of %d Hz to EEPROM..." EOL, isUHF ? "UHF" : "VHF" ,fOffset);
+
+	if (isUHF) {
+		m_eepromData->setRxOffsetUHF(fOffset);
+	} else {
+		m_eepromData->setRxOffsetVHF(fOffset);
+	}
+
+	m_eepromData->writeOffsetData();
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMRxOffset(int offset)
+{
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	bool isUHF;	// Can either be UHF or VHF
+
+	// Determine if frequency is UHF or VHF
+	if (m_startfrequency >= UHF_FREQUENCY_MIN && m_startfrequency <= UHF_FREQUENCY_MAX) {
+		isUHF = true;
+		::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHF = false;
+		::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing %s Rx frequency offset of %d Hz to EEPROM..." EOL, isUHF ? "UHF" : "VHF" ,offset);
+
+	if (isUHF) {
+		m_eepromData->setRxOffsetUHF(offset);
+	} else {
+		m_eepromData->setRxOffsetVHF(offset);
+	}
+
+	m_eepromData->writeOffsetData();
+
+	return true;
+}
+
+bool CMMDVMCal::setNextionText(const char *item, char *txt)
+{
+	char buffer[100];
+	::sprintf(buffer, "%s.txt=\"%s\"", item, txt);
+
+	sendNextionCmd(buffer);
+
+	return true;
+}
+
+bool CMMDVMCal::setNextionInt(const char *item, int n)
+{
+	char buffer[30];
+	::sprintf(buffer, "%s.txt=\"%d\"", item, n);
+	sendNextionCmd(buffer);
+
+	return true;
+}
+
+bool CMMDVMCal::setNextionFloat(const char *item, double f)
+{
+	char buffer[30];
+	::sprintf(buffer, "%s.txt=\"%3.6f\"", item, f);
+	sendNextionCmd(buffer);
+
+	return true;
+}
+
+bool CMMDVMCal::sendNextionCmd(char *cmd)
+{
+	char buffer[120];
+	int len = ::strlen(cmd);
+	if (len >= 100) {
+		::fprintf(stdout, "Nextion command string too long!" EOL);
+		return false;
+	}
+
+	buffer[0] = MMDVM_FRAME_START;
+	buffer[1] = static_cast<unsigned char>(len + 3U + 3U);
+	buffer[2] = MMDVM_SERIAL_DATA;
+	::strcpy(buffer + 3, cmd);
+	::sprintf(buffer + 3 + len, "\xFF\xFF\xFF");
+
+	//::fprintf(stdout, "Sending serial data to Nextion Screen..." EOL);
+	int ret = m_serial.write((unsigned char*)buffer, (len + 3U + 3U));
+	if (ret != static_cast<int>(len + 3U + 3U))
+		return false;
+
+	//::fprintf(stdout, "Waiting for modem response..." EOL);
+	unsigned int count = 0U;
+	RESP_TYPE_MMDVM resp;
+	do {
+		sleep(10U);
+
+		resp = getResponse();
+		if (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK) {
+			count++;
+			if (count >= MAX_RESPONSES) {
+				::fprintf(stderr, "The MMDVM is not responding to the SERIAL_DATA command" EOL);
+				return false;
+			}
+		}
+	} while (resp == RTM_OK && m_buffer[2U] != MMDVM_ACK && m_buffer[2U] != MMDVM_NAK);
+
+	if (resp == RTM_OK && m_buffer[2U] == MMDVM_NAK) {
+		::fprintf(stderr, "Received a NAK to the SERIAL_DATA command from the modem, %u" EOL, m_buffer[4U]);
+		return false;
+	}
+
+	return true;
+}
+
+bool CMMDVMCal::writeCurrentOffsetConfig()
+{
+	if (m_configFile.checkFile() == false) {
+		::fprintf(stderr, "Error writing to configuration file. Does it exist?" EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing current offset to MMDVMHost configuration file..." EOL);
+	m_configFile.setRxOffset(static_cast<int>(m_frequency - m_startfrequency));
+	m_configFile.setTxOffset(static_cast<int>(m_frequency - m_startfrequency));
+	if (m_configFile.writeOffsets() < 0) {
+		::fprintf(stderr, "Error writing to file." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
+}
+
+bool CMMDVMCal::writeEEPROMOffsetsConfig()
+{
+	if (m_configFile.checkFile() == false) {
+		::fprintf(stderr, "Error writing to configuration file. Does it exist?" EOL);
+		return false;
+	}
+
+	if (m_eepromData->checkDetected() == false) {
+		::fprintf(stderr, "Error: EEPROM module not detected." EOL);
+		return false;
+	}
+
+	if (m_eepromData->checkData() == false) {
+		::fprintf(stderr, "Error: EEPROM data is either corrupt or does not exist." EOL);
+		return false;
+	}
+
+	int fRxOffset, fTxOffset;
+	unsigned int fRx, fTx;
+	bool isUHFRx, isUHFTx;	// Can either be UHF or VHF
+
+	fRx = m_configFile.getRxFrequency();
+	fTx = m_configFile.getTxFrequency();
+
+	// Determine if Rx frequency is UHF or VHF
+	if (fRx >= UHF_FREQUENCY_MIN && fRx <= UHF_FREQUENCY_MAX) {
+		isUHFRx = true;
+		//::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHFRx = false;
+		//::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	// Determine if Tx frequency is UHF or VHF
+	if (fTx >= UHF_FREQUENCY_MIN && fTx <= UHF_FREQUENCY_MAX) {
+		isUHFTx = true;
+		//::fprintf(stdout, "UHF frequency detected." EOL);
+	} else if (m_startfrequency >= VHF_FREQUENCY_MIN && m_startfrequency <= VHF_FREQUENCY_MAX) {
+		isUHFTx = false;
+		//::fprintf(stdout, "VHF frequency detected." EOL);
+	} else {
+		::fprintf(stdout, "Invalid frequency. Not stored." EOL);
+		return false;
+	}
+
+	if (isUHFRx) {
+		fRxOffset = m_eepromData->getRxOffsetUHF();
+	} else {
+		fRxOffset = m_eepromData->getRxOffsetVHF();
+	}
+	if (isUHFTx) {
+		fTxOffset = m_eepromData->getTxOffsetUHF();
+	} else {
+		fTxOffset = m_eepromData->getTxOffsetVHF();
+	}
+
+	::fprintf(stdout, "Detected %s Rx frequency and %s Tx Frequency in MMDVMHost configuration file." EOL, isUHFRx ? "UHF" : "VHF", isUHFTx ? "UHF" : "VHF");
+	::fprintf(stdout, "Writing %s Rx offset %d Hz and %s Tx offset %d Hz to configuration file..." EOL, isUHFRx ? "UHF" : "VHF", fRxOffset, isUHFTx ? "UHF" : "VHF", fTxOffset);
+
+	m_configFile.setRxOffset(fRxOffset);
+	m_configFile.setTxOffset(fTxOffset);
+	if (m_configFile.writeOffsets() < 0) {
+		::fprintf(stderr, "Error writing to file." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
+}
+
+bool CMMDVMCal::writeCurrentTxOffsetConfig()
+{
+	if (m_configFile.checkFile() == false) {
+		::fprintf(stderr, "Error writing to configuration file. Does it exist?" EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing current Tx offset to MMDVMHost configuration file..." EOL);
+	m_configFile.setTxOffset(static_cast<int>(m_frequency - m_startfrequency));
+	if (m_configFile.writeOffsets() < 0) {
+		::fprintf(stderr, "Error writing to file." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
+}
+
+bool CMMDVMCal::writeCurrentRxOffsetConfig()
+{
+	if (m_configFile.checkFile() == false) {
+		::fprintf(stderr, "Error writing to configuration file. Does it exist?" EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Writing current Rx offset to MMDVMHost configuration file..." EOL);
+	m_configFile.setRxOffset(static_cast<int>(m_frequency - m_startfrequency));
+	if (m_configFile.writeOffsets() < 0) {
+		::fprintf(stderr, "Error writing to file." EOL);
+		return false;
+	}
+
+	::fprintf(stdout, "Done." EOL);
+
+	return true;
 }
