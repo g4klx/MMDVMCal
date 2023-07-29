@@ -11,6 +11,7 @@
 
 ConfigFile::ConfigFile()
 {
+#ifdef __linux__
 	::sprintf(m_filename, "%s", CONFIG_FILE_PATH);
 	int n = readConfigData();
 	if (n < 0) {
@@ -19,6 +20,9 @@ ConfigFile::ConfigFile()
 	} else {
 		m_fileExists = true;
 	}
+#else
+	m_fileExists = false;
+#endif
 }
 
 ConfigFile::~ConfigFile()
@@ -126,7 +130,7 @@ int ConfigFile::readConfigData()
 				*p = '\0';
 
 			// remove trailing tab/space
-			for (p = value + strlen(value) - 1U; p >= value && (*p == '\t' || *p == ' '); p--)
+			for (p = value + ::strlen(value) - 1U; p >= value && (*p == '\t' || *p == ' '); p--)
 				*p = '\0';
 		}
 

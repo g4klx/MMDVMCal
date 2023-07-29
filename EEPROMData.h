@@ -26,8 +26,8 @@ class CEEPROMData {
 public:
 	CEEPROMData();
 	~CEEPROMData();
-	int readData(unsigned char *data, __u16 addr, unsigned int length, unsigned int timeout);
-	int writeData(unsigned char *data, __u16 addr, unsigned int length, unsigned int timeout);
+	int readData(unsigned char *data, uint16_t addr, unsigned int length, unsigned int timeout);
+	int writeData(unsigned char *data, uint16_t addr, unsigned int length, unsigned int timeout);
 	int getRxOffsetVHF();
 	int getTxOffsetVHF();
 	int getRxOffsetUHF();
@@ -52,17 +52,17 @@ private:
 	int readInt(int addr);
 	int writeInt(int data, int addr, unsigned int timeout);
 
-	const unsigned int m_signature = 0x5a0f;
-	int m_txOffsetUHF;
-	int m_rxOffsetUHF;
-	unsigned char m_reservedUHF;
-	unsigned char m_crc8UHF;
-	int m_txOffsetVHF;
-	int m_rxOffsetVHF;
-	unsigned char m_reservedVHF;
-	unsigned char m_crc8VHF;
-	C24CXX *m_EEPROM;
-	bool m_EEPROMDetected;
+	const unsigned int 	m_signature = 0x5a0f;
+	int 				m_txOffsetUHF;
+	int 				m_rxOffsetUHF;
+	unsigned char 		m_reservedUHF;
+	unsigned char 		m_crc8UHF;
+	int 				m_txOffsetVHF;
+	int 				m_rxOffsetVHF;
+	unsigned char 		m_reservedVHF;
+	unsigned char 		m_crc8VHF;
+	C24CXX 				*m_EEPROM;
+	bool 				m_EEPROMDetected;
 };
 
 

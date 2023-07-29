@@ -1,13 +1,18 @@
-all:	MMDVMCal_eeprom
+all:	MMDVMCal
 
 LD  = c++
 CXX = c++
+CC = cc
 
-CXXFLAGS = -O2 -Wall -std=c++0x -li2c
-LDFLAGS = -li2c
+CXXFLAGS = -O2 -Wall -std=c++0x
+CFLAGS = -O2 -Wall
+LDFLAGS =
 
-MMDVMCal_eeprom:	24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o
-			$(CXX) $(LDFLAGS) -o MMDVMCal_eeprom 24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o  Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
+# Use the following line if compiling on a platform that supports I2C.
+# LIBS = -li2c
+
+MMDVMCal:	24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o smbus.o Console.o Utils.o YSFConvolution.o YSFFICH.o
+		$(CXX) $(LDFLAGS) -o MMDVMCal 24cXX.o BERCal.o ConfigFile.o CRC.o EEPROMData.o  Hamming.o Golay24128.o P25Utils.o MMDVMCal.o NXDNLICH.o SerialController.o SerialPort.o smbus.o Console.o Utils.o YSFConvolution.o YSFFICH.o $(LIBS)
 
 BERCal.o:	BERCal.cpp BERCal.h Golay24128.h Utils.h
 		$(CXX) $(CXXFLAGS) -c BERCal.cpp
@@ -18,7 +23,7 @@ ConfigFile.o:	ConfigFile.cpp ConfigFile.h
 CRC.o:		CRC.cpp CRC.h
 		$(CXX) $(CXXFLAGS) -c CRC.cpp
 
-24cXX.o:	24cXX.cpp 24cXX.h
+24cXX.o:	24cXX.cpp 24cXX.h smbus.h
 		$(CXX) $(CXXFLAGS) -c 24cXX.cpp 
 
 EEPROMData.o:	EEPROMData.cpp EEPROMData.h 24cXX.h
@@ -45,6 +50,9 @@ SerialController.o:	SerialController.cpp SerialController.h
 SerialPort.o:	SerialPort.cpp SerialPort.h
 		$(CXX) $(CXXFLAGS) -c SerialPort.cpp
 
+smbus.o:	smbus.c smbus.h
+		$(CC) $(CFLAGS) -c smbus.c
+
 Console.o:	Console.cpp Console.h
 		$(CXX) $(CXXFLAGS) -c Console.cpp
 
@@ -57,8 +65,24 @@ YSFConvolution.o:	YSFConvolution.cpp YSFConvolution.h
 YSFFICH.o:	YSFFICH.cpp CRC.h Golay24128.h YSFConvolution.h YSFDefines.h YSFFICH.h
 		$(CXX) $(CXXFLAGS) -c YSFFICH.cpp
 
+
+MMDVMCal.o: GitVersion.h FORCE
+
+.PHONY: GitVersion.h
+
+FORCE:
+
 install:
-		install -m 755 MMDVMCal_eeprom /usr/local/bin/
+		install -m 755 MMDVMCal /usr/local/bin/
 
 clean:
-		rm -f *.o *.bak *~ MMDVMCal_eeprom
+		$(RM) *.o *.bak *~ MMDVMCal
+
+# Export the current git version if the index file exists, else 000...
+GitVersion.h:
+ifneq ("$(wildcard .git/index)","")
+	echo "const char *gitversion = \"$(shell git rev-parse HEAD)\";" > $@
+else
+	echo "const char *gitversion = \"0000000000000000000000000000000000000000\";" > $@
+endif
+

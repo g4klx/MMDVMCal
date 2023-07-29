@@ -27,20 +27,20 @@
 #define EEPROM_ADDRESS		0x50
 #define EEPROM_DEVICE		"/dev/i2c-1"
 
-#include <stdint.h>
+#include <cstdint>
 #include "EEPROMData.h"
 
-CEEPROMData::CEEPROMData()
+CEEPROMData::CEEPROMData() :
+m_txOffsetUHF(0),
+m_rxOffsetUHF(0),
+m_reservedUHF(0),
+m_crc8UHF(0U),
+m_txOffsetVHF(0),
+m_rxOffsetVHF(0),
+m_reservedVHF(0),
+m_crc8VHF(0U)
 {
-	m_txOffsetUHF = 0;
-	m_rxOffsetUHF = 0;
-	m_reservedUHF = 0;
-	m_crc8UHF = 0;
-	m_txOffsetVHF = 0;
-	m_rxOffsetVHF = 0;
-	m_reservedVHF = 0;
-	m_crc8VHF = 0;
-	m_EEPROM = new C24CXX(EEPROM_DEVICE, EEPROM_ADDRESS, EEPROM_TYPE_8BIT_ADDR);
+	m_EEPROM = new C24CXX(EEPROM_DEVICE, EEPROM_ADDRESS, ET_8BITADDR);
 
 	if ((m_EEPROM->getFileDescriptor() < 0) || (m_EEPROM->eeprom_check() == false)) {
 		::fprintf(stderr, "Onboard EEPROM not detected.\n");
@@ -69,7 +69,7 @@ CEEPROMData::~CEEPROMData()
 	delete m_EEPROM;
 }
 
-int CEEPROMData::readData(unsigned char *data, __u16 addr,  unsigned int length, unsigned int timeout)
+int CEEPROMData::readData(unsigned char *data, uint16_t addr,  unsigned int length, unsigned int timeout)
 {
 	if (m_EEPROMDetected == false) return -1;
 
@@ -82,7 +82,7 @@ int CEEPROMData::readData(unsigned char *data, __u16 addr,  unsigned int length,
 	return 0;
 }
 
-int CEEPROMData::writeData(unsigned char *data, __u16 addr, unsigned int length, unsigned int timeout)
+int CEEPROMData::writeData(unsigned char *data, uint16_t addr, unsigned int length, unsigned int timeout)
 {
 	if (m_EEPROMDetected == false) return -1;
 
@@ -174,7 +174,7 @@ int CEEPROMData::writeSignature(int addr)
 
 bool CEEPROMData::readSignature(int addr)
 {
-	if (m_EEPROMDetected == false) return -1;
+	if (m_EEPROMDetected == false) return false;
 
 	unsigned char sig[2];
 
@@ -300,7 +300,8 @@ int CEEPROMData::readInt(int addr)
 {
 	int16_t n = 0;
 
-	unsigned char n0, n1;
+	unsigned char n0 = 0;
+	unsigned char n1 = 0;
 
 	readData(&n0, addr+1, 1, 10);					// LSB
 	readData(&n1, addr, 1, 10);						// MSB

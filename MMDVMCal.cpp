@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2015,2016,2017,2018,2020,2021 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2015,2016,2017,2018,2020,2021,2023 by Jonathan Naylor G4KLX
  *   Copyright (C) 2017,2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *
@@ -20,6 +20,7 @@
 
 #include "MMDVMCal.h"
 #include "Version.h"
+#include "GitVersion.h"
 
 #include <cstdio>
 
@@ -294,7 +295,7 @@ void CMMDVMCal::loop_MMDVM()
 				break;
 			case 'V':
 			case 'v':
-				::fprintf(stdout, VERSION EOL);
+				::fprintf(stdout, "Version: %s, Git Version: %s" EOL, VERSION, gitversion);
 				break;
 			case 'F':
 				setFMDeviation();
@@ -2133,7 +2134,7 @@ bool CMMDVMCal::setFreqSweep()
 	::fprintf(stdout, "Performing DMR BER test for optimal Rx Offset..." EOL);
 	::fprintf(stdout, "Press and hold the PTT until the test is complete." EOL);
 	// Pause to allow user to key up their radio and for it to stabilize
-	sleep(1000);
+	sleep(1000U);
 	setFreqValue(m_startfrequency, false);
 	setDMRBER_FEC();
 
@@ -2208,7 +2209,7 @@ void CMMDVMCal::doFreqSweep()
 				// We've reached the high limit. Exit with error.
 				::fprintf(stdout, "Transmission not detected. Exiting." EOL);
 				m_freqSweep = false;
-				sleep(1000);
+				sleep(1000U);
 				setFreqValue(m_startfrequency, false);
 				return;
 			}
@@ -2232,7 +2233,7 @@ void CMMDVMCal::doFreqSweep()
 			m_freqSweep = false;
 			setFreqValue(m_startfrequency, false);
 			m_freqSweepTestTaken = true;
-			sleep(1000);
+			sleep(1000U);
 		}
 	}
 }

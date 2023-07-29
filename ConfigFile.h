@@ -8,11 +8,14 @@
 #ifndef CONFIGFILE_H_
 #define CONFIGFILE_H_
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#ifdef __linux__
 #include <fcntl.h>
 #include <unistd.h>
+#endif
+
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 #define CONFIG_FILE_PATH	"/etc/mmdvmhost"
 
@@ -35,14 +38,14 @@ public:
 	bool checkFile();
 
 private:
-	int m_rxOffset;
-	int m_txOffset;
-	unsigned int m_rxFrequency;
-	unsigned int m_txFrequency;
-	FILE *m_file;
-	int m_fd;
-	char m_filename[100];
-	bool m_fileExists;
+	int 			m_rxOffset;
+	int 			m_txOffset;
+	unsigned int 	m_rxFrequency;
+	unsigned int 	m_txFrequency;
+	FILE 			*m_file;
+	int 			m_fd;
+	char 			m_filename[100];
+	bool 			m_fileExists;
 };
 
 
