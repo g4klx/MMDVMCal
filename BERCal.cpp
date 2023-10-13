@@ -1,5 +1,5 @@
 /*
- *   Copyright (C) 2010,2014,2016,2018 by Jonathan Naylor G4KLX
+ *   Copyright (C) 2010,2014,2016,2018,2023 by Jonathan Naylor G4KLX
  *   Copyright (C) 2018 by Andy Uribe CA6JAU
  *   Copyright (C) 2018 by Bryan Biedenkapp N2PLL
  *   Copyright (C) 2016 Mathias Weyland, HB9FRV
@@ -554,7 +554,9 @@ void CBERCal::DSTARFEC(const unsigned char* buffer, const unsigned char m_tag)
 		m_frames = 0U;
 		return;
 	} else if (m_tag == 0x13U) {
-		::fprintf(stdout, "D-Star voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		if (m_bits > 0U)
+			::fprintf(stdout, "D-Star voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 		timerStop();
 		m_errors = 0U;
 		m_bits = 0U;
@@ -593,7 +595,9 @@ void CBERCal::DMRFEC(const unsigned char* buffer, const unsigned char m_seq)
 		m_frames = 0U;
 		return;
 	} else if (m_seq == 66U) {
-		::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		if (m_bits > 0U)
+			::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 		timerStop();
 		m_errors = 0U;
 		m_bits = 0U;
@@ -796,7 +800,9 @@ void CBERCal::DMR1K(const unsigned char *buffer, const unsigned char m_seq)
 		m_bits += 264;
 		m_frames++;
 
-		::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		if (m_bits > 0U)
+			::fprintf(stdout, "DMR voice end received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 		return;
 	}
 
@@ -835,7 +841,9 @@ void CBERCal::YSFFEC(const unsigned char* buffer)
 			m_frames = 0U;
 			return;
 		} else if (fi == YSF_FI_TERMINATOR) {
-			::fprintf(stdout, "YSF voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			if (m_bits > 0U)
+				::fprintf(stdout, "YSF voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 			timerStop();
 			m_errors = 0U;
 			m_bits = 0U;
@@ -914,7 +922,9 @@ void CBERCal::P25FEC(const unsigned char* buffer)
 		return;
 	}
 	else if (duid == 0x03U) {
-		::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+		if (m_bits > 0U)
+			::fprintf(stdout, "P25 TDU received, total frames: %d, bits: %d, errors: %d, BER: %.4f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 		timerStop();
 		m_bits = 0U;
 		m_errors = 0U;
@@ -1023,7 +1033,9 @@ void CBERCal::NXDNFEC(const unsigned char* buffer, const unsigned char m_tag)
 				m_frames = 0U;
 				return;
 			} else {
-				::fprintf(stdout, "NXDN voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+				if (m_bits > 0U)
+					::fprintf(stdout, "NXDN voice end received, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 				timerStop();
 				m_errors = 0U;
 				m_bits = 0U;
@@ -1291,7 +1303,9 @@ void CBERCal::clock()
 		m_timer += 1U;
 		
 		if (m_timer >= m_timeout) {
-			::fprintf(stdout, "Transmission lost, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+			if (m_bits > 0U)
+				::fprintf(stdout, "Transmission lost, total frames: %d, bits: %d, errors: %d, BER: %.5f%%" EOL, m_frames, m_bits, m_errors, float(m_errors * 100U) / float(m_bits));
+
 			m_errors = 0U;
 			m_bits = 0U;
 			m_frames = 0U;
