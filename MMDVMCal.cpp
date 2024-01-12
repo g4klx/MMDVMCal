@@ -660,7 +660,7 @@ bool CMMDVMCal::initModem()
 					::fprintf(stderr, "Version: 1, description: %.*s" EOL, m_length - 4U, m_buffer + 4U);
 					if (::memcmp(m_buffer + 4U, "MMDVM ", 6U) == 0)
 						m_hwType = HWT_MMDVM;
-					else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 4U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 4U, "SkyBridge", 9U) == 0))
+					else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 4U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 4U, "SkyBridge", 9U) == 0) || (::memcmp(m_buffer + 4U, "EuroNode", 8U) == 0))
 						m_hwType = HWT_MMDVM_HS;
 					else {
 						::fprintf(stderr, "Board not supported" EOL);
@@ -672,7 +672,7 @@ bool CMMDVMCal::initModem()
 					::fprintf(stderr, "Version: 2, description: %.*s" EOL, m_length - 23U, m_buffer + 23U);
 					if (::memcmp(m_buffer + 23U, "MMDVM ", 6U) == 0)
 						m_hwType = HWT_MMDVM;
-					else if ((::memcmp(m_buffer + 23U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 23U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 23U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 23U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 23U, "SkyBridge", 9U) == 0))
+					else if ((::memcmp(m_buffer + 23U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 23U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 23U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 23U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 23U, "SkyBridge", 9U) == 0) || (::memcmp(m_buffer + 4U, "EuroNode", 8U) == 0))
 						m_hwType = HWT_MMDVM_HS;
 					else {
 						::fprintf(stderr, "Board not supported" EOL);
