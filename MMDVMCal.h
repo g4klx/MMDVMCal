@@ -97,6 +97,7 @@ private:
 	unsigned int      m_length;
 	unsigned int      m_offset;
 	HW_TYPE           m_hwType;
+	bool              m_dvmega;
 	unsigned char     m_version;
 	bool              m_dstarEnabled;
 	bool              m_dmrEnabled;
