@@ -139,6 +139,7 @@ m_buffer(NULL),
 m_length(0U),
 m_offset(0U),
 m_hwType(),
+m_dvmega(false),
 m_version(0U),
 m_dstarEnabled(false),
 m_dmrEnabled(false),
@@ -571,6 +572,12 @@ bool CMMDVMCal::initModem()
 						m_hwType = HWT_MMDVM;
 					else if ((::memcmp(m_buffer + 4U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 4U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 4U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 4U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 4U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 4U, "SkyBridge", 9U) == 0) || (::memcmp(m_buffer + 4U, "EuroNode", 8U) == 0))
 						m_hwType = HWT_MMDVM_HS;
+					else if (::memcmp(m_buffer + 4U, "DVMEGA", 6U) == 0) {
+						// A DV-Mega in MMDVM mode: the MMDVM_HS menu (its radio's
+						// frequency, the BER tests), SET_FREQ without the RF level
+						m_hwType = HWT_MMDVM_HS;
+						m_dvmega = true;
+					}
 					else {
 						::fprintf(stderr, "Board not supported" EOL);
 						return false;
@@ -583,6 +590,12 @@ bool CMMDVMCal::initModem()
 						m_hwType = HWT_MMDVM;
 					else if ((::memcmp(m_buffer + 23U, "ZUMspot", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Hat", 12U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS_Dual_Hat", 17U) == 0) || (::memcmp(m_buffer + 23U, "Nano_hotSPOT", 12U) == 0) || (::memcmp(m_buffer + 23U, "Nano_DV", 7U) == 0) || (::memcmp(m_buffer + 23U, "MMDVM_HS-", 9U) == 0) || (::memcmp(m_buffer + 23U, "D2RG_MMDVM_HS", 13U) == 0) || (::memcmp(m_buffer + 23U, "SkyBridge", 9U) == 0) || (::memcmp(m_buffer + 4U, "EuroNode", 8U) == 0))
 						m_hwType = HWT_MMDVM_HS;
+					else if (::memcmp(m_buffer + 23U, "DVMEGA", 6U) == 0) {
+						// A DV-Mega in MMDVM mode: the MMDVM_HS menu (its radio's
+						// frequency, the BER tests), SET_FREQ without the RF level
+						m_hwType = HWT_MMDVM_HS;
+						m_dvmega = true;
+					}
 					else {
 						::fprintf(stderr, "Board not supported" EOL);
 						return false;
@@ -1771,7 +1784,10 @@ bool CMMDVMCal::setFrequency()
 
 	buffer[0U]  = MMDVM_FRAME_START;
 
-	buffer[1U]  = 13U;
+	// A DV-Mega takes the frequencies only: SET_FREQ of 12 bytes
+	const unsigned int len = m_dvmega ? 12U : 13U;
+
+	buffer[1U]  = len;
 
 	buffer[2U]  = MMDVM_SET_FREQ;
 
@@ -1789,8 +1805,8 @@ bool CMMDVMCal::setFrequency()
 
 	buffer[12U]  = (unsigned char)(m_power * 2.55F + 0.5F);
 
-	int ret = m_serial.write(buffer, 13U);
-	if (ret != 13U)
+	int ret = m_serial.write(buffer, len);
+	if (ret != int(len))
 		return false;
 
 	unsigned int count = 0U;
